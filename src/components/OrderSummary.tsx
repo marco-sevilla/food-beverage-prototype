@@ -34,6 +34,7 @@ interface OrderSummaryProps {
   onSubmitOrder?: () => void;
   cartEntries: CartEntry[];
   onUpdateQuantity: (item: SectionItem, quantity: number) => void;
+  isPreviewMode?: boolean;
 }
 
 // Button component
@@ -167,7 +168,8 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
   onAddMoreItems,
   onSubmitOrder,
   cartEntries,
-  onUpdateQuantity
+  onUpdateQuantity,
+  isPreviewMode = false
 }) => {
   const [localCartItems, setLocalCartItems] = useState<CartItem[]>([]);
 
@@ -336,9 +338,9 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
         <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-neutral-200 p-4">
           <Button 
             className="w-full h-12 text-lg"
-            onClick={onSubmitOrder}
+            onClick={isPreviewMode ? onBack : onSubmitOrder}
           >
-            Submit order
+            {isPreviewMode ? 'End preview' : 'Submit order'}
           </Button>
         </div>
       </div>

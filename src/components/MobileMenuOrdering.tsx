@@ -128,6 +128,7 @@ interface MobileMenuOrderingProps {
   cart?: Record<string, number>;
   onUpdateQuantity?: (item: SectionItem, quantity: number) => void;
   onAddItemToCart?: (item: SectionItem, quantity: number, specialRequests?: string) => void;
+  isPreviewMode?: boolean;
 }
 
 interface SectionItem {
@@ -475,7 +476,8 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
   menus = [],
   cart = {},
   onUpdateQuantity,
-  onAddItemToCart
+  onAddItemToCart,
+  isPreviewMode = false
 }) => {
   // Load saved data
   const savedData = loadData();
@@ -798,15 +800,26 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
           <div className="w-10 h-10 opacity-0" />
         </div>
 
-        {/* Menu Dropdown */}
-        <div style={{ padding: `${spacing[3]} ${spacing[4]}` }}>
-          <MenuSelect
-            options={menuOptions}
-            value={selectedMenuName}
-            onChange={handleMenuSelect}
-            placeholder="Select a menu"
-          />
-        </div>
+        {/* Preview Mode Banner */}
+        {isPreviewMode && (
+          <div className="bg-red-500 text-white text-center py-2 px-4">
+            <span className="font-roboto text-body-sm font-medium">
+              Menu preview mode
+            </span>
+          </div>
+        )}
+
+        {/* Menu Dropdown - Hidden in preview mode */}
+        {!isPreviewMode && (
+          <div style={{ padding: `${spacing[3]} ${spacing[4]}` }}>
+            <MenuSelect
+              options={menuOptions}
+              value={selectedMenuName}
+              onChange={handleMenuSelect}
+              placeholder="Select a menu"
+            />
+          </div>
+        )}
 
         {/* Menu Title */}
         <div className="px-4 py-3">

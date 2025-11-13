@@ -91,10 +91,11 @@ interface MenuItemProps {
   entryPoint: string;
   onEdit?: () => void;
   onDelete?: () => void;
+  onPreview?: () => void;
   isLast?: boolean;
 }
 
-const MenuItem: React.FC<MenuItemProps> = ({ name, entryPoint, onEdit, onDelete, isLast = false }) => (
+const MenuItem: React.FC<MenuItemProps> = ({ name, entryPoint, onEdit, onDelete, onPreview, isLast = false }) => (
   <div className={`flex items-center justify-between py-4 px-4 pr-6 bg-white ${
     isLast ? '' : 'border-b border-neutral-200'
   }`}>
@@ -108,8 +109,11 @@ const MenuItem: React.FC<MenuItemProps> = ({ name, entryPoint, onEdit, onDelete,
       {entryPoint}
     </div>
     
-    {/* Actions Column - fixed width to match header with 2 buttons */}
-    <div className="flex items-center gap-2 w-16 justify-end">
+    {/* Actions Column - fixed width to match header with 3 buttons */}
+    <div className="flex items-center gap-2 w-24 justify-end">
+      <Button variant="icon" onClick={onPreview}>
+        <Icon path={mdiEye} size={0.8} color="#666666" />
+      </Button>
       <Button variant="icon" onClick={onEdit}>
         <Icon path={mdiPencil} size={0.8} />
       </Button>
@@ -252,6 +256,7 @@ interface MenuManagementPageProps {
   onEditMenu?: (menuName: string, entryPoint: string) => void;
   onCreateMenu?: (menuName: string) => void;
   onDeleteMenu?: (menuName: string) => void;
+  onPreviewMenu?: (menuName: string) => void;
   onEditItem?: (itemId: string) => void;
   initialActiveTab?: 'menus' | 'item-library' | 'settings';
   onGoToOrdering?: () => void;
@@ -262,6 +267,7 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
   onEditMenu, 
   onCreateMenu,
   onDeleteMenu,
+  onPreviewMenu,
   onEditItem,
   initialActiveTab = 'menus',
   onGoToOrdering
@@ -441,7 +447,7 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
               <div className="flex items-start justify-between px-4 pb-0 pr-6 sm:pl-4 font-roboto text-caption-sm font-medium text-canary-black-3 uppercase">
                 <div className="w-48 lg:w-48 md:w-40 sm:w-32 ml-3">Menu name</div>
                 <div className="w-48 lg:w-48 md:w-40 sm:w-32 hidden sm:block">Entry Points</div>
-                <div className="w-24 opacity-0 text-right">Actions</div>
+                <div className="w-32 opacity-0 text-right">Actions</div>
               </div>
 
               {/* Menu Items */}
@@ -452,6 +458,7 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
                     name={item.name}
                     entryPoint={item.entryPoint}
                     isLast={index === menus.length - 1}
+                    onPreview={() => onPreviewMenu?.(item.name)}
                     onEdit={() => onEditMenu?.(item.name, item.entryPoint)}
                     onDelete={() => handleDeleteClick(item.name)}
                   />

@@ -15,7 +15,7 @@ import { Toast } from './Toast';
 import { FOOD_ITEMS, convertToSectionItem, getFoodItemsByMenu, type FoodItem as CentralizedFoodItem } from '@/data/foodItems';
 import { loadData, saveMenuData, saveMenuAvailability as persistMenuAvailability } from '@/utils/persistence';
 
-type Page = 'menu-management' | 'edit-menu' | 'edit-item' | 'edit-section' | 'menu-availability' | 'mobile-preview' | 'mobile-menu-ordering' | 'order-summary' | 'order-loading' | 'order-confirmation';
+type Page = 'menu-management' | 'edit-menu' | 'edit-item' | 'edit-section' | 'menu-availability' | 'mobile-preview' | 'mobile-menu-ordering' | 'menu-preview' | 'order-summary' | 'order-loading' | 'order-confirmation';
 
 interface MenuItem {
   name: string;
@@ -62,6 +62,7 @@ interface AppState {
   menus: MenuWithSections[];
   cart: Record<string, { item: SectionItem; quantity: number; specialRequests: string }>;
   activeManagementTab: 'menus' | 'item-library' | 'settings';
+  isPreviewMode: boolean;
   toast: {
     isVisible: boolean;
     message: string;
@@ -153,6 +154,7 @@ export const AppRouter: React.FC = () => {
     menus: savedData.menus || initialMenus,
     cart: {},
     activeManagementTab: 'menus',
+    isPreviewMode: false,
     toast: {
       isVisible: false,
       message: '',
@@ -198,6 +200,27 @@ export const AppRouter: React.FC = () => {
     }));
   };
 
+  const navigateToMenuPreview = (menuName: string) => {
+    const menu = appState.menus.find(m => m.name === menuName);
+    setAppState(prev => ({
+      ...prev,
+      currentPage: 'menu-preview',
+      previewingMenu: menu || { name: menuName, entryPoint: 'Preview' },
+      isPreviewMode: true,
+      cart: {} // Clear cart when starting preview
+    }));
+  };
+
+  const navigateBackFromPreview = () => {
+    setAppState(prev => ({
+      ...prev,
+      currentPage: 'menu-management',
+      previewingMenu: undefined,
+      isPreviewMode: false,
+      cart: {} // Clear cart when ending preview
+    }));
+  };
+
   const navigateBackToMobilePreview = () => {
     setAppState(prev => ({
       ...prev,
@@ -215,7 +238,7 @@ export const AppRouter: React.FC = () => {
   const navigateBackToMobileMenuOrdering = () => {
     setAppState(prev => ({
       ...prev,
-      currentPage: 'mobile-menu-ordering'
+      currentPage: prev.isPreviewMode ? 'menu-preview' : 'mobile-menu-ordering'
     }));
   };
 
@@ -596,6 +619,27 @@ export const AppRouter: React.FC = () => {
           />
         </>
       );
+    case 'menu-preview':
+      return (
+        <>
+          <MobileMenuOrdering
+            menuName={appState.previewingMenu?.name}
+            menus={appState.previewingMenu ? [appState.previewingMenu] : []}
+            cart={getLegacyCart()}
+            onBack={navigateBackFromPreview}
+            onViewCart={navigateToOrderSummary}
+            onUpdateQuantity={handleUpdateQuantity}
+            onAddItemToCart={addItemToCart}
+            isPreviewMode={true}
+          />
+          <Toast
+            message={appState.toast.message}
+            type={appState.toast.type}
+            isVisible={appState.toast.isVisible}
+            onClose={hideToast}
+          />
+        </>
+      );
     case 'mobile-menu-ordering':
       return (
         <>
@@ -621,10 +665,11 @@ export const AppRouter: React.FC = () => {
         <>
           <OrderSummary
             cartEntries={Object.values(appState.cart)}
-            onBack={navigateBackToMobileMenuOrdering}
+            onBack={appState.isPreviewMode ? navigateBackFromPreview : navigateBackToMobileMenuOrdering}
             onAddMoreItems={navigateBackToMobileMenuOrdering}
             onUpdateQuantity={handleUpdateQuantity}
             onSubmitOrder={navigateToOrderLoading}
+            isPreviewMode={appState.isPreviewMode}
           />
           <Toast
             message={appState.toast.message}
@@ -707,6 +752,7 @@ export const AppRouter: React.FC = () => {
             onEditMenu={navigateToEditMenu}
             onCreateMenu={createNewMenu}
             onDeleteMenu={deleteMenu}
+            onPreviewMenu={navigateToMenuPreview}
             onEditItem={navigateToEditItem}
             initialActiveTab={appState.activeManagementTab}
             onGoToOrdering={navigateToMobileMenuOrdering}
