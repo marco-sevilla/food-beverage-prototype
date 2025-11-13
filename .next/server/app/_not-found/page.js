@@ -1,0 +1,13 @@
+var R=require("../../chunks/ssr/[turbopack]_runtime.js")("server/app/_not-found/page.js")
+R.c("server/chunks/ssr/2482f_canary-foodandbeverage-prototype_food and beverage prototype_49695f7b._.js")
+R.c("server/chunks/ssr/[root-of-the-server]__9ebe26ed._.js")
+R.c("server/chunks/ssr/62e20_next_dist_esm_build_templates_app-page_cffb61fb.js")
+R.c("server/chunks/ssr/[root-of-the-server]__884dc27c._.js")
+R.c("server/chunks/ssr/[root-of-the-server]__3f3924aa._.js")
+R.c("server/chunks/ssr/[root-of-the-server]__1bef700a._.js")
+R.c("server/chunks/ssr/c06ed_oodandbeverage-prototype_food and beverage prototype_src_app_layout_tsx_7e46cca0._.js")
+R.c("server/chunks/ssr/62e20_next_dist_client_components_0e042f6f._.js")
+R.c("server/chunks/ssr/62e20_next_dist_client_components_builtin_forbidden_b1a2cae6.js")
+R.c("server/chunks/ssr/5fb15_nd beverage prototype__next-internal_server_app__not-found_page_actions_a6d7d492.js")
+R.m(14620)
+module.exports=R.m(14620).exports

@@ -1,0 +1,31 @@
+{
+  "name": "food-and-beverage-prototype",
+  "version": "1.0.0",
+  "description": "Canary Food and Beverage Prototype",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@canary-ui/components": "github:msantana-canary/canary-prototype-foundation#v0.1.3",
+    "@mdi/js": "^7.4.47",
+    "@mdi/react": "^1.6.1",
+    "clsx": "^2.1.1",
+    "next": "16.0.1",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.0.1",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}

@@ -1,0 +1,51 @@
+globalThis.__BUILD_MANIFEST = {
+  "pages": {
+    "/_app": [
+      "static/chunks/62e20_next_dist_compiled_6bd164fa._.js",
+      "static/chunks/62e20_next_dist_shared_lib_f433c57a._.js",
+      "static/chunks/62e20_next_dist_client_eed5263e._.js",
+      "static/chunks/62e20_next_dist_c434db33._.js",
+      "static/chunks/62e20_next_app_e25c8a03.js",
+      "static/chunks/[next]_entry_page-loader_ts_c3974313._.js",
+      "static/chunks/62e20_react-dom_d69be3a1._.js",
+      "static/chunks/62e20_83e2bf20._.js",
+      "static/chunks/[root-of-the-server]__391ef003._.js",
+      "static/chunks/2482f_canary-foodandbeverage-prototype_food and beverage prototype_pages__app_2da965e7._.js",
+      "static/chunks/28e44_canary-foodandbeverage-prototype_food and beverage prototype_pages__app_11d67ee8._.js"
+    ],
+    "/_error": [
+      "static/chunks/62e20_next_dist_compiled_6bd164fa._.js",
+      "static/chunks/62e20_next_dist_shared_lib_6c7b2e4b._.js",
+      "static/chunks/62e20_next_dist_client_eed5263e._.js",
+      "static/chunks/62e20_next_dist_f4089da8._.js",
+      "static/chunks/62e20_next_error_3b11f2e0.js",
+      "static/chunks/[next]_entry_page-loader_ts_e1131df4._.js",
+      "static/chunks/62e20_react-dom_d69be3a1._.js",
+      "static/chunks/62e20_83e2bf20._.js",
+      "static/chunks/[root-of-the-server]__9caff4c5._.js",
+      "static/chunks/6132c_nary-foodandbeverage-prototype_food and beverage prototype_pages__error_2da965e7._.js",
+      "static/chunks/07578_nary-foodandbeverage-prototype_food and beverage prototype_pages__error_d21df7d0._.js"
+    ]
+  },
+  "devFiles": [],
+  "polyfillFiles": [
+    "static/chunks/62e20_next_dist_build_polyfills_polyfill-nomodule.js"
+  ],
+  "lowPriorityFiles": [],
+  "rootMainFiles": [
+    "static/chunks/[turbopack]_browser_dev_hmr-client_hmr-client_ts_965480a0._.js",
+    "static/chunks/62e20_next_dist_compiled_react-dom_96fe5fa7._.js",
+    "static/chunks/62e20_next_dist_compiled_react-server-dom-turbopack_4bc4d5fb._.js",
+    "static/chunks/62e20_next_dist_compiled_next-devtools_index_7027f9a3.js",
+    "static/chunks/62e20_next_dist_compiled_ffea0e19._.js",
+    "static/chunks/62e20_next_dist_client_59ac6b45._.js",
+    "static/chunks/62e20_next_dist_7b8947e1._.js",
+    "static/chunks/62e20_2ffce80f._.js",
+    "static/chunks/2482f_canary-foodandbeverage-prototype_food and beverage prototype_a0ff3932._.js",
+    "static/chunks/28e44_canary-foodandbeverage-prototype_food and beverage prototype_b7b9c044._.js"
+  ]
+};
+globalThis.__BUILD_MANIFEST.lowPriorityFiles = [
+"/static/" + process.env.__NEXT_BUILD_ID + "/_buildManifest.js",
+"/static/" + process.env.__NEXT_BUILD_ID + "/_ssgManifest.js"
+];
