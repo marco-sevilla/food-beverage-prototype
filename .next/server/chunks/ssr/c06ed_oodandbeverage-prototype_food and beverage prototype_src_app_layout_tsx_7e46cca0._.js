@@ -1,3 +1,0 @@
-module.exports=[72563,a=>{"use strict";var b=a.i(51535);function c({children:a}){return(0,b.jsx)("html",{lang:"en",children:(0,b.jsx)("body",{className:"antialiased",children:a})})}a.s(["default",()=>c,"metadata",0,{title:"Food & Beverage Ordering",description:"Canary Food and Beverage Management System"}])}];
-
-//# sourceMappingURL=c06ed_oodandbeverage-prototype_food%20and%20beverage%20prototype_src_app_layout_tsx_7e46cca0._.js.map
