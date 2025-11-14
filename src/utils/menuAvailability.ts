@@ -146,6 +146,7 @@ export const isMenuAvailable = (
 // Helper function to find next available day and time
 const findNextAvailable = (menuAvailability: DayAvailability[], currentDay: string): string => {
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const dayAbbreviations = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const currentDayIndex = daysOfWeek.indexOf(currentDay);
   
   // Check the next 7 days starting from tomorrow
@@ -155,17 +156,21 @@ const findNextAvailable = (menuAvailability: DayAvailability[], currentDay: stri
     const nextDayAvailability = menuAvailability.find(d => d.day === nextDay);
     
     if (nextDayAvailability) {
+      const formatTime = (time: string) => {
+        const [hours, minutes] = time.split(':').map(Number);
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+        return `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+      };
+      
+      // Determine day display text
+      const dayDisplay = i === 1 ? 'tomorrow' : dayAbbreviations[nextDayIndex];
+      
       if (nextDayAvailability.type === 'open-24') {
-        return `Available ${nextDay} at 12:00 AM`;
+        return `Available ${dayDisplay} at 12:00 AM`;
       } else if (nextDayAvailability.type === 'set-hours' && nextDayAvailability.timeRanges.length > 0) {
         const firstRange = nextDayAvailability.timeRanges[0];
-        const formatTime = (time: string) => {
-          const [hours, minutes] = time.split(':').map(Number);
-          const ampm = hours >= 12 ? 'PM' : 'AM';
-          const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-          return `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
-        };
-        return `Available ${nextDay} at ${formatTime(firstRange.openTime)}`;
+        return `Available ${dayDisplay} at ${formatTime(firstRange.openTime)}`;
       }
     }
   }
@@ -173,7 +178,7 @@ const findNextAvailable = (menuAvailability: DayAvailability[], currentDay: stri
   return 'Currently unavailable';
 };
 
-// Get the current availability status and time info for a menu
+// Get the current availability status and time info for a menu with three distinct states
 export const getMenuAvailabilityInfo = (
   menuName: string,
   currentDay: string,
@@ -181,70 +186,70 @@ export const getMenuAvailabilityInfo = (
   currentMinute: number,
   currentAmPm: 'AM' | 'PM',
   availabilityData?: DayAvailability[]
-): { isAvailable: boolean; timeInfo: string } => {
+): { isAvailable: boolean; timeInfo: string; status: 'available-now' | 'available-later-today' | 'not-available-today' } => {
   const isAvailable = isMenuAvailable(menuName, currentDay, currentHour, currentMinute, currentAmPm, availabilityData);
   const menuAvailability = getSavedOrDefaultAvailability(menuName, availabilityData);
   
   // Get the actual availability for today
   const todayAvailability = menuAvailability.find(d => d.day === currentDay);
+  const currentTime = convertTo24Hour(currentHour, currentMinute, currentAmPm);
   
-  let timeInfo = 'Available 24 hours';
+  const formatTime = (time: string) => {
+    const [hours, minutes] = time.split(':').map(Number);
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+    return `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+  };
   
-  if (todayAvailability) {
-    if (todayAvailability.type === 'open-24') {
-      timeInfo = 'Available all day';
-    } else if (todayAvailability.type === 'closed') {
-      timeInfo = 'Closed';
-    } else if (todayAvailability.type === 'set-hours' && todayAvailability.timeRanges.length > 0) {
-      // Format time ranges for display
-      const ranges = todayAvailability.timeRanges.map(range => {
-        const formatTime = (time: string) => {
-          const [hours, minutes] = time.split(':').map(Number);
-          const ampm = hours >= 12 ? 'PM' : 'AM';
-          const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-          return `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
-        };
-        return `${formatTime(range.openTime)} - ${formatTime(range.closeTime)}`;
-      }).join(', ');
-      timeInfo = ranges;
-    }
-  }
-  
+  // If menu is currently available
   if (isAvailable) {
-    return {
-      isAvailable: true,
-      timeInfo
-    };
-  } else {
-    // For unavailable menus, check if they have hours today first
-    if (todayAvailability?.type === 'closed') {
-      // Menu is closed today, show next available day
-      const nextAvailable = findNextAvailable(menuAvailability, currentDay);
+    if (todayAvailability?.type === 'open-24') {
       return {
-        isAvailable: false,
-        timeInfo: nextAvailable
+        isAvailable: true,
+        timeInfo: 'Available all day',
+        status: 'available-now'
       };
     } else if (todayAvailability?.type === 'set-hours' && todayAvailability.timeRanges.length > 0) {
-      // Menu has hours today but is not currently available - show today's time ranges
+      // Find which time range the current time falls into
+      const activeRange = todayAvailability.timeRanges.find(range => 
+        isTimeInRange(currentTime, range.openTime, range.closeTime)
+      );
+      
+      if (activeRange) {
+        return {
+          isAvailable: true,
+          timeInfo: `Available until ${formatTime(activeRange.closeTime)}`,
+          status: 'available-now'
+        };
+      }
+    }
+  }
+  
+  // Check if menu has hours today but is not currently available (available later today)
+  if (todayAvailability?.type === 'set-hours' && todayAvailability.timeRanges.length > 0) {
+    const currentMinutes = timeToMinutes(currentTime);
+    
+    // Find the next time range that starts after current time
+    const upcomingRange = todayAvailability.timeRanges.find(range => {
+      const openMinutes = timeToMinutes(range.openTime);
+      return openMinutes > currentMinutes;
+    });
+    
+    if (upcomingRange) {
       return {
         isAvailable: false,
-        timeInfo
-      };
-    } else if (todayAvailability?.type === 'open-24') {
-      // This shouldn't happen if the menu is open 24 hours, but just in case
-      return {
-        isAvailable: false,
-        timeInfo: 'Available all day'
+        timeInfo: `Available at ${formatTime(upcomingRange.openTime)}`,
+        status: 'available-later-today'
       };
     }
-    
-    // Fallback: show next available time
-    const nextAvailable = findNextAvailable(menuAvailability, currentDay);
-    return {
-      isAvailable: false,
-      timeInfo: nextAvailable
-    };
   }
+  
+  // Menu is not available today
+  return {
+    isAvailable: false,
+    timeInfo: 'Not available today',
+    status: 'not-available-today'
+  };
 };
 
 // Find the first available menu or the one that will be available soonest

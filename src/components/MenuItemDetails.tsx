@@ -7,6 +7,7 @@ import {
   mdiPlus,
   mdiMinus
 } from '@mdi/js';
+import { colors, typography } from '@/lib/design-tokens';
 
 interface SectionItem {
   id: string;
@@ -22,6 +23,7 @@ interface MenuItemDetailsProps {
   onAddToCart: (item: SectionItem, quantity: number, specialRequests: string) => void;
   initialQuantity?: number;
   isMenuAvailable?: boolean;
+  isPreviewMode?: boolean;
 }
 
 export const MenuItemDetails: React.FC<MenuItemDetailsProps> = ({
@@ -30,7 +32,8 @@ export const MenuItemDetails: React.FC<MenuItemDetailsProps> = ({
   onClose,
   onAddToCart,
   initialQuantity = 1,
-  isMenuAvailable = true
+  isMenuAvailable = true,
+  isPreviewMode = false
 }) => {
   const [quantity, setQuantity] = useState(initialQuantity);
   const [specialRequests, setSpecialRequests] = useState('');
@@ -104,6 +107,27 @@ export const MenuItemDetails: React.FC<MenuItemDetailsProps> = ({
           willChange: 'transform'
         }}
       >
+        {/* Preview Mode Banner - Very Top */}
+        {isPreviewMode && (
+          <div 
+            className="text-white text-center py-2 px-4"
+            style={{ 
+              backgroundColor: colors.red1
+            }}
+          >
+            <span 
+              style={{
+                fontFamily: typography.fontFamily.primary,
+                fontSize: typography.fontSize.bodySm,
+                fontWeight: typography.fontWeight.medium,
+                color: colors.white
+              }}
+            >
+              Menu preview mode
+            </span>
+          </div>
+        )}
+
         {/* Header Image (if exists) */}
         {item.image && (
           <div className="relative h-58 w-full">

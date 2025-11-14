@@ -197,7 +197,7 @@ const Button: React.FC<ButtonProps> = ({
 
 // Enhanced Select component with availability info
 interface MenuSelectProps {
-  options: Array<{ label: string; value: string; timeInfo?: string; isAvailable?: boolean }>;
+  options: Array<{ label: string; value: string; timeInfo?: string; isAvailable?: boolean; status?: 'available-now' | 'available-later-today' | 'not-available-today' }>;
   value?: string;
   onChange?: (event: React.ChangeEvent<HTMLSelectElement>) => void;
   placeholder?: string;
@@ -212,10 +212,23 @@ const MenuSelect: React.FC<MenuSelectProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const selectedOption = options.find(opt => opt.value === value);
 
-  // Format the display with inline parentheses and proper styling
+  // Format the display with inline parentheses and proper styling based on status
   const renderDisplayText = (option: typeof selectedOption, isCompact = false) => {
     if (!option) return <span style={{ fontFamily: typography.fontFamily.primary }}>{placeholder}</span>;
     if (!option.timeInfo) return <span style={{ fontFamily: typography.fontFamily.primary }}>{option.label}</span>;
+    
+    // Determine colors based on status
+    const getStatusColor = (status?: string) => {
+      switch (status) {
+        case 'available-now':
+          return '#008040'; // Green color from Figma
+        case 'available-later-today':
+        case 'not-available-today':
+          return colors.black4; // Gray color
+        default:
+          return colors.black4;
+      }
+    };
     
     return (
       <span 
@@ -230,7 +243,8 @@ const MenuSelect: React.FC<MenuSelectProps> = ({
         <span 
           style={{
             fontWeight: typography.fontWeight.regular,
-            color: option.isAvailable ? colors.black1 : colors.black4
+            color: getStatusColor(option.status),
+            fontSize: '1rem' // 16px as requested
           }}
         >
           {` (${option.timeInfo})`}
@@ -273,49 +287,79 @@ const MenuSelect: React.FC<MenuSelectProps> = ({
               backgroundColor: colors.white,
               borderColor: colors.black5,
               borderRadius: borderRadius.default,
-              boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+              boxShadow: "0px 8px 24px 0px rgba(0,0,0,0.16)",
             }}
             className="absolute top-full left-0 right-0 mt-1 border z-20 max-h-64 overflow-y-auto"
           >
-            {options.map((option) => (
-              <div
-                key={option.value}
-                onClick={() => {
-                  onChange?.({ target: { value: option.value } } as React.ChangeEvent<HTMLSelectElement>);
-                  setIsOpen(false);
-                }}
-                style={{
-                  padding: `${spacing[3]} ${spacing[4]}`,
-                  borderBottomColor: colors.neutral200,
-                }}
-                className="cursor-pointer hover:bg-gray-50 border-b last:border-b-0 min-w-0"
-              >
-                <div className="truncate">
-                  <span 
-                    style={{ 
-                      fontFamily: typography.fontFamily.primary,
-                      fontSize: typography.fontSize.body,
-                      fontWeight: typography.fontWeight.regular,
-                      color: colors.black1,
-                    }}
-                  >
-                    {option.label}
-                  </span>
-                  {option.timeInfo && (
-                    <span 
-                      style={{
-                        fontFamily: typography.fontFamily.primary,
-                        fontSize: typography.fontSize.body,
-                        fontWeight: typography.fontWeight.regular,
-                        color: option.isAvailable ? colors.black1 : colors.black4
-                      }}
-                    >
-                      {` (${option.timeInfo})`}
-                    </span>
+            {options.map((option, index) => {
+              const isSelected = option.value === value;
+              const getStatusColor = (status?: string) => {
+                switch (status) {
+                  case 'available-now':
+                    return '#008040'; // Green color from Figma
+                  case 'available-later-today':
+                  case 'not-available-today':
+                    return colors.black4; // Gray color
+                  default:
+                    return colors.black4;
+                }
+              };
+
+              return (
+                <div
+                  key={option.value}
+                  onClick={() => {
+                    onChange?.({ target: { value: option.value } } as React.ChangeEvent<HTMLSelectElement>);
+                    setIsOpen(false);
+                  }}
+                  style={{
+                    padding: spacing[2], // 8px padding to match Figma
+                  }}
+                  className="cursor-pointer hover:bg-gray-50 flex items-start gap-2"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="truncate">
+                      <span 
+                        style={{ 
+                          fontFamily: typography.fontFamily.primary,
+                          fontSize: '16px', // Match Figma exactly
+                          fontWeight: typography.fontWeight.regular,
+                          color: colors.black1,
+                          lineHeight: '24px'
+                        }}
+                      >
+                        {option.label}
+                      </span>
+                      {option.timeInfo && (
+                        <span 
+                          style={{
+                            fontFamily: typography.fontFamily.primary,
+                            fontSize: '1rem', // 16px as requested
+                            fontWeight: typography.fontWeight.regular,
+                            color: getStatusColor(option.status),
+                            lineHeight: '22px'
+                          }}
+                        >
+                          {` (${option.timeInfo})`}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Checkmark for currently selected menu */}
+                  {isSelected && (
+                    <div className="flex items-center justify-center w-6 h-6 shrink-0">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path 
+                          d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" 
+                          fill="#666666"
+                        />
+                      </svg>
+                    </div>
                   )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </>
       )}
@@ -515,7 +559,8 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
       label: menu.name,
       value: menu.name,
       timeInfo: availabilityInfo.timeInfo,
-      isAvailable: availabilityInfo.isAvailable
+      isAvailable: availabilityInfo.isAvailable,
+      status: availabilityInfo.status
     };
   });
 
@@ -785,6 +830,29 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
           boxShadow: '0px 8px 16px 0px rgba(0,0,0,0.16)'
         }}
       >
+        {/* Preview Mode Banner - Very Top */}
+        {isPreviewMode && (
+          <div 
+            className="text-white text-center py-2 px-4"
+            style={{ 
+              backgroundColor: colors.red1,
+              borderTopLeftRadius: '44px',
+              borderTopRightRadius: '44px'
+            }}
+          >
+            <span 
+              style={{
+                fontFamily: typography.fontFamily.primary,
+                fontSize: typography.fontSize.bodySm,
+                fontWeight: typography.fontWeight.medium,
+                color: colors.white
+              }}
+            >
+              Menu preview mode
+            </span>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-4 bg-white">
           <Button 
@@ -799,15 +867,6 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
           
           <div className="w-10 h-10 opacity-0" />
         </div>
-
-        {/* Preview Mode Banner */}
-        {isPreviewMode && (
-          <div className="bg-red-500 text-white text-center py-2 px-4">
-            <span className="font-roboto text-body-sm font-medium">
-              Menu preview mode
-            </span>
-          </div>
-        )}
 
         {/* Menu Dropdown - Hidden in preview mode */}
         {!isPreviewMode && (
@@ -910,6 +969,7 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
           onAddToCart={handleAddToCartFromDetails}
           initialQuantity={selectedItem ? cart[selectedItem.id] || 1 : 1}
           isMenuAvailable={isCurrentMenuAvailable}
+          isPreviewMode={isPreviewMode}
         />
 
         {/* Ordering Closed Modal */}

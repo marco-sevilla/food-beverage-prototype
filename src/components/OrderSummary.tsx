@@ -8,6 +8,7 @@ import {
   mdiMinus,
   mdiDelete
 } from '@mdi/js';
+import { colors, typography } from '@/lib/design-tokens';
 import { MenuItemPlaceholder } from './MenuItemPlaceholder';
 
 interface SectionItem {
@@ -243,6 +244,29 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
           boxShadow: '0px 8px 16px 0px rgba(0,0,0,0.16)'
         }}
       >
+        {/* Preview Mode Banner - Very Top */}
+        {isPreviewMode && (
+          <div 
+            className="text-white text-center py-2 px-4"
+            style={{ 
+              backgroundColor: colors.red1,
+              borderTopLeftRadius: '44px',
+              borderTopRightRadius: '44px'
+            }}
+          >
+            <span 
+              style={{
+                fontFamily: typography.fontFamily.primary,
+                fontSize: typography.fontSize.bodySm,
+                fontWeight: typography.fontWeight.medium,
+                color: colors.white
+              }}
+            >
+              Menu preview mode
+            </span>
+          </div>
+        )}
+
         {/* Header Image Section */}
         <div className="relative w-full h-[230px] overflow-hidden">
           <img 
