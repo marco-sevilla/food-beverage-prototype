@@ -14,6 +14,7 @@ import clsx from 'clsx';
 import { MenuItemDetails } from './MenuItemDetails';
 import { MenuItemPlaceholder } from './MenuItemPlaceholder';
 import { OrderingClosedModal } from './OrderingClosedModal';
+import { MenuUnavailableMessage } from './MenuUnavailableMessage';
 import { isMenuAvailable, getMenuAvailabilityInfo, getDefaultMenu } from '@/utils/menuAvailability';
 import { loadData, saveDemoTime, saveSelectedMenu, saveCart, getImage } from '@/utils/persistence';
 
@@ -244,7 +245,7 @@ const MenuSelect: React.FC<MenuSelectProps> = ({
           style={{
             fontWeight: typography.fontWeight.regular,
             color: getStatusColor(option.status),
-            fontSize: '1rem' // 16px as requested
+            fontSize: isCompact ? typography.fontSize.body : typography.fontSize.subtitle // Match menu name size
           }}
         >
           {` (${option.timeInfo})`}
@@ -258,25 +259,33 @@ const MenuSelect: React.FC<MenuSelectProps> = ({
       <button
         onClick={() => setIsOpen(!isOpen)}
         style={{
-          borderColor: colors.black3,
+          borderColor: colors.neutral200,
           borderRadius: borderRadius.default,
           backgroundColor: colors.white,
           fontFamily: typography.fontFamily.primary,
           fontSize: typography.fontSize.subtitle,
           padding: `${spacing[3]} ${spacing[4]}`,
-          paddingRight: spacing[10],
         }}
-        className="w-full h-12 border text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 overflow-hidden"
+        className="w-full h-12 border text-left flex items-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 overflow-hidden"
       >
         <div className="flex-1 min-w-0 pr-2">
           <div className="truncate">{renderDisplayText(selectedOption)}</div>
         </div>
-        <Icon 
-          path={mdiChevronDown} 
-          size={1} 
-          color={colors.black3}
-          style={{ flexShrink: 0 }}
-        />
+        <div 
+          style={{
+            position: 'absolute',
+            right: spacing[3], // Same as left padding for symmetry
+            top: '50%',
+            transform: 'translateY(-50%)'
+          }}
+        >
+          <Icon 
+            path={mdiChevronDown} 
+            size={1} 
+            color={colors.black3}
+            style={{ flexShrink: 0 }}
+          />
+        </div>
       </button>
       
       {isOpen && (
@@ -285,7 +294,7 @@ const MenuSelect: React.FC<MenuSelectProps> = ({
           <div 
             style={{
               backgroundColor: colors.white,
-              borderColor: colors.black5,
+              borderColor: colors.neutral200,
               borderRadius: borderRadius.default,
               boxShadow: "0px 8px 24px 0px rgba(0,0,0,0.16)",
             }}
@@ -886,6 +895,17 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
             {selectedMenuName}
           </h2>
         </div>
+
+        {/* Menu Unavailable Message - Show when menu is not currently available */}
+        {!isCurrentMenuAvailable && (
+          <div className="px-4 pb-3">
+            <MenuUnavailableMessage
+              menuName={selectedMenuName}
+              timeInfo={menuOptions.find(opt => opt.value === selectedMenuName)?.timeInfo || ''}
+              status={menuOptions.find(opt => opt.value === selectedMenuName)?.status === 'available-later-today' ? 'available-later-today' : 'not-available-today'}
+            />
+          </div>
+        )}
 
         {/* Section Tabs - Only show if there are multiple sections AND content is scrollable */}
         {shouldShowTabs && (

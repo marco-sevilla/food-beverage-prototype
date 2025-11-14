@@ -29,35 +29,9 @@ import {
 } from '@mdi/js';
 import { CreateSectionModal } from './CreateSectionModal';
 
-// Navigation Item component (same as MenuManagementPage)
-interface NavItemProps {
-  children: React.ReactNode;
-  icon: string;
-  active?: boolean;
-  onClick?: () => void;
-}
+// Import the CanarySidebar component
+import CanarySidebar, { SidebarVariant, type SidebarSection, type SidebarNavigationItem } from './CanarySidebar';
 
-const NavItem: React.FC<NavItemProps> = ({ children, icon, active = false, onClick }) => (
-  <div 
-    className={`h-10 w-full relative flex items-center cursor-pointer ${
-      active ? 'bg-white rounded mx-2' : ''
-    }`}
-    onClick={onClick}
-  >
-    <div className="absolute left-4 opacity-50 w-6 h-6 flex items-center justify-center">
-      <Icon 
-        path={icon} 
-        size={1} 
-        color={active ? '#000000' : '#ffffff'} 
-      />
-    </div>
-    <span className={`absolute left-12 font-roboto text-sm font-normal ${
-      active ? 'text-black' : 'text-white'
-    }`}>
-      {children}
-    </span>
-  </div>
-);
 
 // Button component
 interface ButtonProps {
@@ -174,9 +148,11 @@ interface MenuSection {
 interface EditMenuPageProps {
   onBack?: () => void;
   menuName?: string;
+  internalName?: string;
+  externalName?: string;
   isNewMenu?: boolean;
   sections?: MenuSection[];
-  onSave?: (menuName: string, isNew: boolean) => boolean;
+  onSave?: (externalName: string, internalName: string, isNew: boolean) => boolean;
   onEditSection?: (sectionId: string) => void;
   onAddAvailabilityHours?: () => void;
 }
@@ -184,13 +160,16 @@ interface EditMenuPageProps {
 export const EditMenuPage: React.FC<EditMenuPageProps> = ({ 
   onBack, 
   menuName = "Lunch menu",
+  internalName,
+  externalName,
   isNewMenu = false,
   sections,
   onSave,
   onEditSection,
   onAddAvailabilityHours
 }) => {
-  const [title, setTitle] = useState(menuName);
+  const [internalMenuName, setInternalMenuName] = useState(internalName || menuName);
+  const [externalMenuName, setExternalMenuName] = useState(externalName || menuName);
   const [localSections, setLocalSections] = useState(
     isNewMenu ? [] : (sections || []).map(section => ({
       id: section.id,
@@ -208,7 +187,7 @@ export const EditMenuPage: React.FC<EditMenuPageProps> = ({
   };
 
   const handleSave = () => {
-    const success = onSave?.(title, isNewMenu || false);
+    const success = onSave?.(externalMenuName, internalMenuName, isNewMenu || false);
     // onSave handles showing toast messages
   };
 
@@ -227,59 +206,134 @@ export const EditMenuPage: React.FC<EditMenuPageProps> = ({
     setLocalSections(localSections.filter(section => section.id !== id));
   };
 
+  // Create sidebar sections
+  const sidebarSections: SidebarSection[] = [
+    {
+      id: 'general',
+      title: 'General Settings',
+      items: [
+        { 
+          id: 'property-info', 
+          label: 'Property Info', 
+          icon: <Icon path={mdiHome} size="24px" />
+        },
+        { 
+          id: 'branding', 
+          label: 'Branding', 
+          icon: <Icon path={mdiBrushVariant} size="24px" />
+        },
+        { 
+          id: 'staff-members', 
+          label: 'Staff Members', 
+          icon: <Icon path={mdiAccountMultiple} size="24px" />
+        },
+        { 
+          id: 'security', 
+          label: 'Security', 
+          icon: <Icon path={mdiSecurity} size="24px" />
+        },
+        { 
+          id: 'integrations', 
+          label: 'Integrations', 
+          icon: <Icon path={mdiCog} size="24px" />
+        }
+      ]
+    },
+    {
+      id: 'product',
+      title: 'Product settings',
+      items: [
+        { 
+          id: 'compendium', 
+          label: 'Compendium', 
+          icon: <Icon path={mdiBook} size="24px" />
+        },
+        { 
+          id: 'fb-ordering', 
+          label: 'F&B Ordering', 
+          icon: <Icon path={mdiFoodForkDrink} size="24px" />
+        },
+        { 
+          id: 'upsells', 
+          label: 'Upsells', 
+          icon: <Icon path={mdiTrendingUp} size="24px" />
+        },
+        { 
+          id: 'check-in', 
+          label: 'Check-in', 
+          icon: <Icon path={mdiLoginVariant} size="24px" />
+        },
+        { 
+          id: 'checkout', 
+          label: 'Checkout', 
+          icon: <Icon path={mdiLogoutVariant} size="24px" />
+        },
+        { 
+          id: 'messages', 
+          label: 'Messages', 
+          icon: <Icon path={mdiMessage} size="24px" />
+        },
+        { 
+          id: 'digital-tips', 
+          label: 'Digital Tips', 
+          icon: <Icon path={mdiCurrencyUsd} size="24px" />
+        },
+        { 
+          id: 'authorizations', 
+          label: 'Authorizations', 
+          icon: <Icon path={mdiShieldCheck} size="24px" />
+        },
+        { 
+          id: 'contracts', 
+          label: 'Contracts', 
+          icon: <Icon path={mdiFileDocument} size="24px" />
+        },
+        { 
+          id: 'payment-links', 
+          label: 'Payment Links', 
+          icon: <Icon path={mdiLink} size="24px" />
+        }
+      ]
+    }
+  ];
+
+  // Canary logo component
+  const canaryLogo = (
+    <img 
+      src="/canary-logo.png" 
+      alt="Canary" 
+      style={{ width: '140px', height: '24px', objectFit: 'contain' }}
+    />
+  );
+
+  // Back button component for the sidebar  
+  const backButton = (
+    <button 
+      className="h-16 w-full relative flex items-center bg-canary-black-1 cursor-pointer text-white hover:opacity-90 transition-opacity"
+      onClick={() => onBack?.()}
+    >
+      <div className="absolute left-4 opacity-50 w-6 h-6 flex items-center justify-center">
+        <Icon path={mdiArrowLeft} size={1} color="#ffffff" />
+      </div>
+      <span className="absolute left-12 font-roboto text-sm font-medium text-white">
+        Back
+      </span>
+    </button>
+  );
+
   return (
     <div className="flex h-screen rounded-xl shadow-canary overflow-hidden">
-      {/* Sidebar - Same as MenuManagementPage */}
-      <div className="w-45 bg-canary-black-2 flex flex-col">
-        {/* Back button */}
-        <div className="h-16 w-full relative flex items-center bg-canary-black-1 cursor-pointer">
-          <div className="absolute left-4 opacity-50 w-6 h-6 flex items-center justify-center">
-            <Icon path={mdiArrowLeft} size={1} color="#ffffff" />
-          </div>
-          <span className="absolute left-12 font-roboto text-sm font-medium text-white">
-            Back
-          </span>
-        </div>
-
-        {/* Navigation */}
-        <div className="w-full flex flex-col gap-6 pt-6">
-          {/* General Settings */}
-          <div className="flex flex-col">
-            <div className="px-4 pb-4 font-roboto text-xs font-normal text-white opacity-30 uppercase leading-4">
-              General Settings
-            </div>
-            <div className="flex flex-col gap-4">
-              <NavItem icon={mdiHome}>Property Info</NavItem>
-              <NavItem icon={mdiBrushVariant}>Branding</NavItem>
-              <NavItem icon={mdiAccountMultiple}>Staff Members</NavItem>
-              <NavItem icon={mdiSecurity}>Security</NavItem>
-              <NavItem icon={mdiCog}>Integrations</NavItem>
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div className="h-px bg-white opacity-20"></div>
-
-          {/* Product Settings */}
-          <div className="flex flex-col">
-            <div className="px-4 pb-4 font-roboto text-xs font-normal text-white opacity-30 uppercase leading-4">
-              Product settings
-            </div>
-            <div className="flex flex-col gap-4">
-              <NavItem icon={mdiBook}>Compendium</NavItem>
-              <NavItem icon={mdiFoodForkDrink} active>F&B Ordering</NavItem>
-              <NavItem icon={mdiTrendingUp}>Upsells</NavItem>
-              <NavItem icon={mdiLoginVariant}>Check-in</NavItem>
-              <NavItem icon={mdiLogoutVariant}>Checkout</NavItem>
-              <NavItem icon={mdiMessage}>Messages</NavItem>
-              <NavItem icon={mdiCurrencyUsd}>Digital Tips</NavItem>
-              <NavItem icon={mdiShieldCheck}>Authorizations</NavItem>
-              <NavItem icon={mdiFileDocument}>Contracts</NavItem>
-              <NavItem icon={mdiLink}>Payment Links</NavItem>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* CanarySidebar */}
+      <CanarySidebar 
+        variant={SidebarVariant.SETTINGS}
+        sections={sidebarSections}
+        logo={canaryLogo}
+        selectedItemId="fb-ordering"
+        backButton={backButton}
+        onItemClick={(itemId) => {
+          console.log('Clicked item:', itemId);
+        }}
+      />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-full min-w-0">
@@ -321,7 +375,7 @@ export const EditMenuPage: React.FC<EditMenuPageProps> = ({
                   <Icon path={mdiArrowLeft} size={1} />
                 </button>
                 <h1 className="font-roboto text-subtitle font-medium text-canary-black-1">
-                  {isNewMenu ? (title || 'New Menu') : menuName}
+                  {isNewMenu ? (externalMenuName || 'New Menu') : externalMenuName}
                 </h1>
               </div>
               <Button onClick={handleSave}>Save</Button>
@@ -334,17 +388,41 @@ export const EditMenuPage: React.FC<EditMenuPageProps> = ({
                 <h2 className="font-roboto text-subtitle font-semibold text-canary-black-1 mb-6">
                   Basic info
                 </h2>
-                <div>
-                  <label className="block font-roboto text-body-sm font-medium text-canary-black-1 mb-2">
-                    Title*
-                  </label>
-                  <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="w-full h-12 px-4 border border-neutral-200 rounded font-roboto text-body-sm text-canary-black-1 focus:outline-none focus:ring-2 focus:ring-canary-blue-1"
-                    placeholder="Enter menu title"
-                  />
+                
+                <div className="space-y-4">
+                  {/* External Menu Name */}
+                  <div>
+                    <label className="block font-roboto text-body-sm font-medium text-canary-black-1 mb-2">
+                      External menu name*
+                    </label>
+                    <input
+                      type="text"
+                      value={externalMenuName}
+                      onChange={(e) => setExternalMenuName(e.target.value)}
+                      className="w-full h-12 px-4 border border-neutral-200 rounded font-roboto text-body-sm text-canary-black-1 focus:outline-none focus:ring-2 focus:ring-canary-blue-1 focus:border-canary-blue-1"
+                      placeholder="Enter external menu name"
+                    />
+                    <p className="mt-1 font-roboto text-caption text-canary-black-4">
+                      This name will be displayed to guests and the public.
+                    </p>
+                  </div>
+
+                  {/* Internal Menu Name */}
+                  <div>
+                    <label className="block font-roboto text-body-sm font-medium text-canary-black-1 mb-2">
+                      Internal menu name*
+                    </label>
+                    <input
+                      type="text"
+                      value={internalMenuName}
+                      onChange={(e) => setInternalMenuName(e.target.value)}
+                      className="w-full h-12 px-4 border border-neutral-200 rounded font-roboto text-body-sm text-canary-black-1 focus:outline-none focus:ring-2 focus:ring-canary-blue-1 focus:border-canary-blue-1"
+                      placeholder="Enter internal menu name"
+                    />
+                    <p className="mt-1 font-roboto text-caption text-canary-black-4">
+                      This name will be used for internal staff views and operations.
+                    </p>
+                  </div>
                 </div>
               </div>
 

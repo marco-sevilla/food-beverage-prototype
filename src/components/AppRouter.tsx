@@ -11,14 +11,17 @@ import { OrderSubmissionLoading } from './OrderSubmissionLoading';
 import { OrderConfirmation } from './OrderConfirmation';
 import { EditSectionPage } from './EditSectionPage';
 import { MenuAvailabilityPage } from './MenuAvailabilityPage';
+import { OrderManagementPage } from './OrderManagementPage';
 import { Toast } from './Toast';
 import { FOOD_ITEMS, convertToSectionItem, getFoodItemsByMenu, type FoodItem as CentralizedFoodItem } from '@/data/foodItems';
 import { loadData, saveMenuData, saveMenuAvailability as persistMenuAvailability } from '@/utils/persistence';
 
-type Page = 'menu-management' | 'edit-menu' | 'edit-item' | 'edit-section' | 'menu-availability' | 'mobile-preview' | 'mobile-menu-ordering' | 'menu-preview' | 'order-summary' | 'order-loading' | 'order-confirmation';
+type Page = 'order-management' | 'menu-management' | 'edit-menu' | 'edit-item' | 'edit-section' | 'menu-availability' | 'mobile-preview' | 'mobile-menu-ordering' | 'menu-preview' | 'order-summary' | 'order-loading' | 'order-confirmation';
 
 interface MenuItem {
-  name: string;
+  name: string; // This will be the external_name for backward compatibility
+  internal_name?: string; // Internal name for staff views
+  external_name?: string; // External name for guest views (same as name initially)
   entryPoint: string;
   isNew?: boolean;
 }
@@ -80,7 +83,9 @@ export const AppRouter: React.FC = () => {
 
   const initialMenus: MenuWithSections[] = [
     { 
-      name: 'Breakfast menu', 
+      name: 'Breakfast menu',
+      internal_name: 'Breakfast menu',
+      external_name: 'Breakfast menu', 
       entryPoint: 'In-room dining',
       sections: [
         {
@@ -91,7 +96,9 @@ export const AppRouter: React.FC = () => {
       ]
     },
     { 
-      name: 'Lunch menu', 
+      name: 'Lunch menu',
+      internal_name: 'Lunch menu',
+      external_name: 'Lunch menu', 
       entryPoint: 'In-room dining',
       sections: [
         {
@@ -112,7 +119,9 @@ export const AppRouter: React.FC = () => {
       ]
     },
     { 
-      name: 'Dinner menu', 
+      name: 'Dinner menu',
+      internal_name: 'Dinner menu',
+      external_name: 'Dinner menu', 
       entryPoint: 'In-room dining', 
       sections: [
         {
@@ -123,7 +132,9 @@ export const AppRouter: React.FC = () => {
       ]
     },
     { 
-      name: 'Happy hour menu', 
+      name: 'Happy hour menu',
+      internal_name: 'Happy hour menu',
+      external_name: 'Happy hour menu', 
       entryPoint: 'In-room dining', 
       sections: [
         {
@@ -134,7 +145,9 @@ export const AppRouter: React.FC = () => {
       ]
     },
     { 
-      name: 'Dessert menu', 
+      name: 'Dessert menu',
+      internal_name: 'Dessert menu',
+      external_name: 'Dessert menu', 
       entryPoint: 'In-room dining', 
       sections: [
         {
@@ -150,7 +163,7 @@ export const AppRouter: React.FC = () => {
   const savedData = loadData();
 
   const [appState, setAppState] = useState<AppState>({
-    currentPage: 'menu-management',
+    currentPage: 'order-management',
     menus: savedData.menus || initialMenus,
     cart: {},
     activeManagementTab: 'menus',
@@ -174,6 +187,13 @@ export const AppRouter: React.FC = () => {
       currentPage: 'edit-menu',
       editingMenu: menu || { name: menuName, entryPoint },
       activeManagementTab: 'menus' // Set to menus so we return to the menus tab
+    }));
+  };
+
+  const navigateToOrderManagement = () => {
+    setAppState(prev => ({
+      ...prev,
+      currentPage: 'order-management'
     }));
   };
 
@@ -506,6 +526,8 @@ export const AppRouter: React.FC = () => {
   const createNewMenu = (menuName: string) => {
     const newMenu: MenuItem = {
       name: menuName,
+      internal_name: menuName, // Initially same as external name
+      external_name: menuName, // Initially same as name
       entryPoint: 'In-room dining',
       isNew: true
     };
@@ -518,9 +540,9 @@ export const AppRouter: React.FC = () => {
     }));
   };
 
-  const saveMenu = (menuName: string, isNew: boolean) => {
-    if (!menuName.trim()) {
-      showToast('Menu name is required', 'error');
+  const saveMenu = (externalName: string, internalName: string, isNew: boolean) => {
+    if (!externalName.trim() || !internalName.trim()) {
+      showToast('Both external and internal menu names are required', 'error');
       return false;
     }
 
@@ -529,13 +551,45 @@ export const AppRouter: React.FC = () => {
         ...prev,
         menus: prev.menus.map(menu =>
           menu.isNew && menu.name === prev.editingMenu?.name
-            ? { ...menu, name: menuName, isNew: false }
+            ? { 
+                ...menu, 
+                name: externalName,
+                external_name: externalName,
+                internal_name: internalName,
+                isNew: false 
+              }
             : menu
         ),
-        editingMenu: prev.editingMenu ? { ...prev.editingMenu, name: menuName, isNew: false } : undefined
+        editingMenu: prev.editingMenu ? { 
+          ...prev.editingMenu, 
+          name: externalName,
+          external_name: externalName,
+          internal_name: internalName,
+          isNew: false 
+        } : undefined
       }));
       showToast('Menu created successfully', 'success');
     } else {
+      // Update existing menu
+      setAppState(prev => ({
+        ...prev,
+        menus: prev.menus.map(menu =>
+          menu.name === prev.editingMenu?.name
+            ? { 
+                ...menu, 
+                name: externalName,
+                external_name: externalName,
+                internal_name: internalName
+              }
+            : menu
+        ),
+        editingMenu: prev.editingMenu ? { 
+          ...prev.editingMenu, 
+          name: externalName,
+          external_name: externalName,
+          internal_name: internalName
+        } : undefined
+      }));
       showToast('Menu saved successfully', 'success');
     }
     return true;
@@ -571,6 +625,20 @@ export const AppRouter: React.FC = () => {
   };
 
   switch (appState.currentPage) {
+    case 'order-management':
+      return (
+        <>
+          <OrderManagementPage 
+            onManageMenus={navigateToMenuManagement}
+          />
+          <Toast
+            message={appState.toast.message}
+            type={appState.toast.type}
+            isVisible={appState.toast.isVisible}
+            onClose={hideToast}
+          />
+        </>
+      );
     case 'menu-availability':
       return (
         <>
@@ -728,6 +796,8 @@ export const AppRouter: React.FC = () => {
         <>
           <EditMenuPage
             menuName={appState.editingMenu?.name}
+            internalName={appState.editingMenu?.internal_name}
+            externalName={appState.editingMenu?.external_name}
             isNewMenu={appState.editingMenu?.isNew}
             sections={appState.editingMenu?.sections}
             onBack={() => navigateToMenuManagementWithTab('menus')}
@@ -756,6 +826,7 @@ export const AppRouter: React.FC = () => {
             onEditItem={navigateToEditItem}
             initialActiveTab={appState.activeManagementTab}
             onGoToOrdering={navigateToMobileMenuOrdering}
+            onBackToOrders={navigateToOrderManagement}
           />
           <Toast
             message={appState.toast.message}

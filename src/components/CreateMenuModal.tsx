@@ -80,6 +80,9 @@ export const CreateMenuModal: React.FC<CreateMenuModalProps> = ({
                 {error}
               </p>
             )}
+            <p className="mt-2 font-roboto text-caption text-canary-black-4">
+              This name will be used for both guest-facing and internal staff views. You can set a separate internal name once you create the menu.
+            </p>
           </div>
 
           {/* Footer */}
