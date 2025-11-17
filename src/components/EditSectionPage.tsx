@@ -66,8 +66,8 @@ const snapCursorToDragOverlay: Modifier = ({ activatorEvent, draggingNodeRect, t
       y: 'clientY' in activatorEvent ? activatorEvent.clientY : 0,
     };
 
-    const offsetX = activatorCoordinates.x - draggingNodeRect.left;
-    const offsetY = activatorCoordinates.y - draggingNodeRect.top;
+    const offsetX = (activatorCoordinates.x as number) - draggingNodeRect.left;
+    const offsetY = (activatorCoordinates.y as number) - draggingNodeRect.top;
 
     return {
       ...transform,

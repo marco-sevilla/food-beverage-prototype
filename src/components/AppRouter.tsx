@@ -242,7 +242,8 @@ export const AppRouter: React.FC = () => {
         isTransitioning: true,
         fromPage: prev.currentPage,
         toPage: targetPage,
-        phase: 'blur'
+        phase: 'blur',
+        direction: 'forward'
       }
     }));
 
@@ -256,7 +257,8 @@ export const AppRouter: React.FC = () => {
           isTransitioning: true,
           fromPage: prev.pageTransition.fromPage,
           toPage: targetPage,
-          phase: 'fade-in'
+          phase: 'fade-in',
+          direction: 'forward'
         }
       }));
     }, 350);
@@ -267,7 +269,8 @@ export const AppRouter: React.FC = () => {
         ...prev,
         pageTransition: {
           isTransitioning: false,
-          phase: 'none'
+          phase: 'none',
+          direction: 'forward'
         }
       }));
     }, 750);
