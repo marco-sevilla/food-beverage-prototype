@@ -133,7 +133,7 @@ export const OrderDenialModal: React.FC<OrderDenialModalProps> = ({
         {/* Left side - empty for spacing */}
         <div className="opacity-0">
           <CanaryButton 
-            type={ButtonType.SECONDARY}
+            type={ButtonType.OUTLINED}
             size={ButtonSize.NORMAL}
             color={ButtonColor.NORMAL}
           >
@@ -145,7 +145,7 @@ export const OrderDenialModal: React.FC<OrderDenialModalProps> = ({
         <div className="flex gap-2">
           <CanaryButton
             onClick={handleCancel}
-            type={ButtonType.SECONDARY}
+            type={ButtonType.OUTLINED}
             size={ButtonSize.NORMAL}
             color={ButtonColor.NORMAL}
           >
@@ -153,7 +153,7 @@ export const OrderDenialModal: React.FC<OrderDenialModalProps> = ({
           </CanaryButton>
           <CanaryButton
             onClick={handleDenyRequest}
-            disabled={!selectedReason}
+            isDisabled={!selectedReason}
             type={ButtonType.PRIMARY}
             size={ButtonSize.NORMAL}
             color={ButtonColor.DANGER}

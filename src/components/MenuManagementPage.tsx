@@ -45,7 +45,7 @@ interface TabProps {
   children: React.ReactNode;
   active?: boolean;
   onClick?: () => void;
-  tabRef?: React.RefObject<HTMLButtonElement>;
+  tabRef?: React.RefObject<HTMLButtonElement | null>;
 }
 
 const Tab: React.FC<TabProps> = ({ children, active = false, onClick, tabRef }) => (

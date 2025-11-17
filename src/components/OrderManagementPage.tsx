@@ -679,7 +679,7 @@ export const OrderManagementPage: React.FC<OrderManagementPageProps> = ({
 
         {/* Product Header */}
         <div className="bg-white border-b border-neutral-200 py-4 px-6 sm:px-4 flex items-center justify-between">
-          <h1 className="font-roboto text-[20px] font-medium" style={{ color: colors.colorBlack1 }}>
+          <h1 className="font-roboto text-[20px] font-medium" style={{ color: colors.black1 }}>
             Food and Beverage Orders
           </h1>
           <CanaryButton 
@@ -724,13 +724,13 @@ export const OrderManagementPage: React.FC<OrderManagementPageProps> = ({
               
               {/* New Orders Section */}
               <div className="space-y-4">
-                <h3 className="font-roboto text-[16px] font-medium" style={{ color: colors.colorBlack1 }}>
+                <h3 className="font-roboto text-[16px] font-medium" style={{ color: colors.black1 }}>
                   New orders
                 </h3>
                 <OrdersTable
                   orders={newOrders}
                   orderStatus="pending"
-                  selectedOrderId={selectedOrderId}
+                  selectedOrderId={selectedOrderId ?? undefined}
                   prepTimeMinutes={prepTimeMinutes}
                   onRowClick={(order) => {
                     console.log('Clicked order:', order.orderNumber);
@@ -752,13 +752,13 @@ export const OrderManagementPage: React.FC<OrderManagementPageProps> = ({
 
               {/* In Progress Orders Section */}
               <div className="space-y-4">
-                <h3 className="font-roboto text-[16px] font-medium" style={{ color: colors.colorBlack1 }}>
+                <h3 className="font-roboto text-[16px] font-medium" style={{ color: colors.black1 }}>
                   In progress orders
                 </h3>
                 <OrdersTable
                   orders={inProgressOrders}
                   orderStatus="preparing"
-                  selectedOrderId={selectedOrderId}
+                  selectedOrderId={selectedOrderId ?? undefined}
                   prepTimeMinutes={prepTimeMinutes}
                   onRowClick={(order) => {
                     console.log('Clicked order:', order.orderNumber);
@@ -780,13 +780,13 @@ export const OrderManagementPage: React.FC<OrderManagementPageProps> = ({
 
               {/* Delivered Orders Section */}
               <div className="space-y-4">
-                <h3 className="font-roboto text-[16px] font-medium" style={{ color: colors.colorBlack1 }}>
+                <h3 className="font-roboto text-[16px] font-medium" style={{ color: colors.black1 }}>
                   Delivered orders
                 </h3>
                 <OrdersTable
                   orders={deliveredOrders}
                   orderStatus="delivered"
-                  selectedOrderId={selectedOrderId}
+                  selectedOrderId={selectedOrderId ?? undefined}
                   prepTimeMinutes={prepTimeMinutes}
                   onRowClick={(order) => {
                     console.log('Clicked order:', order.orderNumber);
@@ -806,13 +806,13 @@ export const OrderManagementPage: React.FC<OrderManagementPageProps> = ({
 
               {/* Cancelled Orders Section */}
               <div className="space-y-4">
-                <h3 className="font-roboto text-[16px] font-medium" style={{ color: colors.colorBlack1 }}>
+                <h3 className="font-roboto text-[16px] font-medium" style={{ color: colors.black1 }}>
                   Cancelled orders
                 </h3>
                 <OrdersTable
                   orders={cancelledOrders}
                   orderStatus="cancelled"
-                  selectedOrderId={selectedOrderId}
+                  selectedOrderId={selectedOrderId ?? undefined}
                   prepTimeMinutes={prepTimeMinutes}
                   onRowClick={(order) => {
                     console.log('Clicked order:', order.orderNumber);
@@ -837,7 +837,7 @@ export const OrderManagementPage: React.FC<OrderManagementPageProps> = ({
       {/* Order Details Side Sheet */}
       <OrderDetailsSideSheet
         isOpen={isSideSheetOpen}
-        order={selectedOrder}
+        order={selectedOrder ?? undefined}
         prepTimeMinutes={prepTimeMinutes}
         denialInfo={selectedOrder ? denialInfoMap[selectedOrder.id] : undefined}
         onClose={() => {
@@ -877,7 +877,6 @@ export const OrderManagementPage: React.FC<OrderManagementPageProps> = ({
           // Keep side sheet open to show denial confirmation
         }}
         onViewEmail={onViewEmail}
-        prepTimeMinutes={prepTimeMinutes}
         onViewDenialEmail={onViewDenialEmail}
       />
 

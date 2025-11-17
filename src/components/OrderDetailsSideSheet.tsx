@@ -11,7 +11,7 @@ import {
 } from '@mdi/js';
 import CanaryButton from './temp-components/CanaryButton';
 import { ButtonType, ButtonSize, ButtonColor } from './temp-components/button-types';
-import { colors, typography } from './temp-components/design-tokens';
+import { colors } from './temp-components/design-tokens';
 import CanaryTag, { TagColor, TagVariant, TagSize } from './temp-components/CanaryTag';
 
 // Types for order details
