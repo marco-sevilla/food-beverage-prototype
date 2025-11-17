@@ -17,6 +17,7 @@ import { DenialEmailPreview } from './DenialEmailPreview';
 import { Toast } from './Toast';
 import { FOOD_ITEMS, convertToSectionItem, getFoodItemsByMenu, type FoodItem as CentralizedFoodItem } from '@/data/foodItems';
 import { loadData, saveMenuData, saveMenuAvailability as persistMenuAvailability, savePrepTime } from '@/utils/persistence';
+import { AnimatePresence } from 'framer-motion';
 
 // OrderDetails interface for email preview
 interface OrderDetails {
@@ -109,6 +110,7 @@ interface AppState {
     fromPage?: Page;
     toPage?: Page;
     phase: 'blur' | 'fade-in' | 'none';
+    direction: 'forward' | 'backward' | 'modal';
   };
 }
 
@@ -201,6 +203,12 @@ export const AppRouter: React.FC = () => {
   // Load saved data on app initialization
   const savedData = loadData();
 
+  const [feedbackState, setFeedbackState] = useState({
+    isVisible: false,
+    type: 'success' as 'success' | 'error' | 'loading',
+    message: ''
+  });
+
   const [appState, setAppState] = useState<AppState>({
     currentPage: 'order-management',
     menus: savedData.menus || initialMenus,
@@ -215,7 +223,8 @@ export const AppRouter: React.FC = () => {
     },
     pageTransition: {
       isTransitioning: false,
-      phase: 'none'
+      phase: 'none',
+      direction: 'forward'
     }
   });
 
@@ -403,6 +412,18 @@ export const AppRouter: React.FC = () => {
         }
       }
     }));
+    
+    // Show feedback animation
+    setFeedbackState({
+      isVisible: true,
+      type: 'success',
+      message: `${item.name} added to cart!`
+    });
+    
+    // Hide feedback after 2 seconds
+    setTimeout(() => {
+      setFeedbackState(prev => ({ ...prev, isVisible: false }));
+    }, 2000);
   };
 
   const handleUpdateQuantity = (item: SectionItem, quantity: number) => {

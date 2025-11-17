@@ -32,6 +32,53 @@ import {
 } from '@mdi/js';
 import { AddItemsModal } from './AddItemsModal';
 
+// Import drag and drop components
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+  type Modifier,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { restrictToWindowEdges } from '@dnd-kit/modifiers';
+import { motion } from 'framer-motion';
+
+// Custom modifier to position drag overlay under cursor
+const snapCursorToDragOverlay: Modifier = ({ activatorEvent, draggingNodeRect, transform }) => {
+  if (activatorEvent && draggingNodeRect) {
+    const activatorCoordinates = {
+      x: 'clientX' in activatorEvent ? activatorEvent.clientX : 0,
+      y: 'clientY' in activatorEvent ? activatorEvent.clientY : 0,
+    };
+
+    const offsetX = activatorCoordinates.x - draggingNodeRect.left;
+    const offsetY = activatorCoordinates.y - draggingNodeRect.top;
+
+    return {
+      ...transform,
+      x: transform.x + offsetX - draggingNodeRect.width / 2,
+      y: transform.y + offsetY - draggingNodeRect.height / 2,
+    };
+  }
+
+  return transform;
+};
+
 // Import the CanarySidebar component
 import CanarySidebar, { SidebarVariant, type SidebarSection, type SidebarNavigationItem } from './CanarySidebar';
 
@@ -110,30 +157,73 @@ const Input: React.FC<InputProps> = ({
   </div>
 );
 
-// Section Item component
+// Sortable Section Item component
 interface SectionItemProps {
   id: string;
   name: string;
   image: string;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
+  isDragging?: boolean;
 }
 
-const SectionItem: React.FC<SectionItemProps> = ({ 
+const SortableSectionItem: React.FC<SectionItemProps> = ({ 
   id, 
   name, 
   image, 
   onEdit, 
-  onDelete 
+  onDelete,
+  isDragging = false
 }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging: isSortableDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition: transition || 'transform 200ms cubic-bezier(0.25, 1, 0.5, 1)',
+  };
+
   // Get saved image for this item (check both storage systems)
   const savedItem = getItem(id);
   const savedImage = savedItem?.image || getImage(id) || image;
   
   return (
-    <div className="flex items-center gap-3 py-3 px-3 bg-white">
+    <motion.div
+      ref={setNodeRef}
+      style={style}
+      className={clsx(
+        "flex items-center gap-3 py-3 px-3 bg-white border-b border-neutral-200 last:border-b-0 relative",
+        isSortableDragging && "opacity-50 z-50",
+        isDragging && "shadow-xl"
+      )}
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ 
+        opacity: isSortableDragging ? 0.5 : 1, 
+        x: 0,
+        scale: isDragging ? 1.02 : 1
+      }}
+      exit={{ opacity: 0, x: 20 }}
+      whileDrag={{
+        scale: 1.02,
+        boxShadow: "0 10px 25px rgba(0, 0, 0, 0.15)",
+        zIndex: 1000
+      }}
+    >
       {/* Drag Handle */}
-      <div className="cursor-move text-canary-black-4">
+      <div 
+        className={clsx(
+          "cursor-grab text-canary-black-4 transition-colors duration-200 hover:text-canary-black-2 p-1 rounded active:cursor-grabbing",
+          isSortableDragging && "text-canary-blue-1 cursor-grabbing"
+        )}
+        {...attributes}
+        {...listeners}
+      >
         <Icon path={mdiDrag} size={1} />
       </div>
       
@@ -150,21 +240,71 @@ const SectionItem: React.FC<SectionItemProps> = ({
         </div>
       )}
     
-    {/* Item Name */}
-    <span className="flex-1 font-roboto text-body-sm font-medium text-canary-black-1">
-      {name}
-    </span>
+      {/* Item Name */}
+      <span className="flex-1 font-roboto text-body-sm font-medium text-canary-black-1">
+        {name}
+      </span>
+      
+      {/* Actions */}
+      <div className="flex items-center gap-2">
+        <Button variant="icon" onClick={() => onEdit(id)}>
+          <Icon path={mdiPencil} size={0.8} />
+        </Button>
+        <Button variant="icon" onClick={() => onDelete(id)}>
+          <Icon path={mdiDelete} size={0.8} color="#E40046" />
+        </Button>
+      </div>
+    </motion.div>
+  );
+};
+
+// Static Section Item component for drag overlay
+const SectionItem: React.FC<SectionItemProps> = ({ 
+  id, 
+  name, 
+  image, 
+  onEdit, 
+  onDelete 
+}) => {
+  // Get saved image for this item (check both storage systems)
+  const savedItem = getItem(id);
+  const savedImage = savedItem?.image || getImage(id) || image;
+  
+  return (
+    <div className="flex items-center gap-3 py-3 px-3 bg-white border border-neutral-200 rounded-lg shadow-xl">
+      {/* Drag Handle */}
+      <div className="cursor-move text-canary-blue-1">
+        <Icon path={mdiDrag} size={1} />
+      </div>
+      
+      {/* Item Image */}
+      {savedImage ? (
+        <img 
+          src={savedImage} 
+          alt={name}
+          className="w-10 h-10 rounded object-cover"
+        />
+      ) : (
+        <div className="w-10 h-10 rounded bg-gray-200 flex items-center justify-center">
+          <span className="text-gray-400 text-xs">No image</span>
+        </div>
+      )}
     
-    {/* Actions */}
-    <div className="flex items-center gap-2">
-      <Button variant="icon" onClick={() => onEdit(id)}>
-        <Icon path={mdiPencil} size={0.8} />
-      </Button>
-      <Button variant="icon" onClick={() => onDelete(id)}>
-        <Icon path={mdiDelete} size={0.8} color="#E40046" />
-      </Button>
+      {/* Item Name */}
+      <span className="flex-1 font-roboto text-body-sm font-medium text-canary-black-1">
+        {name}
+      </span>
+      
+      {/* Actions */}
+      <div className="flex items-center gap-2">
+        <Button variant="icon" onClick={() => {}}>
+          <Icon path={mdiPencil} size={0.8} />
+        </Button>
+        <Button variant="icon" onClick={() => {}}>
+          <Icon path={mdiDelete} size={0.8} color="#E40046" />
+        </Button>
+      </div>
     </div>
-  </div>
   );
 };
 
@@ -230,6 +370,54 @@ export const EditSectionPage: React.FC<EditSectionPageProps> = ({
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isAddItemsModalOpen, setIsAddItemsModalOpen] = useState(false);
+  
+  // Drag and drop state
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 3,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Find the active item for drag overlay
+  const activeItem = useMemo(() => {
+    return activeId ? sectionData.items.find(item => item.id === activeId) : null;
+  }, [activeId, sectionData.items]);
+
+  // Drag handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      setSectionData((prevData) => {
+        const oldIndex = prevData.items.findIndex(item => item.id === active.id);
+        const newIndex = prevData.items.findIndex(item => item.id === over.id);
+        
+        const reorderedItems = arrayMove(prevData.items, oldIndex, newIndex);
+        
+        // Save the new order to persistence
+        import('@/utils/persistence').then(({ saveItemOrder }) => {
+          saveItemOrder(prevData.id, reorderedItems.map(item => item.id));
+        });
+        
+        return {
+          ...prevData,
+          items: reorderedItems
+        };
+      });
+    }
+    
+    setActiveId(null);
+  };
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const currentSectionRef = useRef<HTMLDivElement>(null);
 
@@ -559,19 +747,55 @@ export const EditSectionPage: React.FC<EditSectionPageProps> = ({
                     </p>
                   </div>
                 ) : (
-                  <div className="border border-neutral-200 rounded-lg overflow-hidden">
-                    {sectionData.items.map((item, index) => (
-                      <div key={item.id} className={index < sectionData.items.length - 1 ? "border-b border-neutral-200" : ""}>
-                        <SectionItem
-                          id={item.id}
-                          name={item.name}
-                          image={item.image}
-                          onEdit={handleEditItem}
-                          onDelete={handleDeleteItem}
-                        />
-                      </div>
-                    ))}
-                  </div>
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <div className="border border-neutral-200 rounded-lg overflow-hidden">
+                      <SortableContext items={sectionData.items.map(item => item.id)} strategy={verticalListSortingStrategy}>
+                        {sectionData.items.map((item) => (
+                          <SortableSectionItem
+                            key={item.id}
+                            id={item.id}
+                            name={item.name}
+                            image={item.image}
+                            onEdit={handleEditItem}
+                            onDelete={handleDeleteItem}
+                          />
+                        ))}
+                      </SortableContext>
+                    </div>
+                    
+                    {/* Drag Overlay */}
+                    <DragOverlay
+                      dropAnimation={{
+                        duration: 200,
+                        easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+                      }}
+                      modifiers={[snapCursorToDragOverlay]}
+                      zIndex={9999}
+                    >
+                      {activeItem ? (
+                        <div style={{ 
+                          transform: 'rotate(2deg)',
+                          cursor: 'grabbing',
+                          pointerEvents: 'none',
+                          opacity: 0.95,
+                        }}>
+                          <SectionItem
+                            id={activeItem.id}
+                            name={activeItem.name}
+                            image={activeItem.image}
+                            onEdit={() => {}}
+                            onDelete={() => {}}
+                            isDragging={true}
+                          />
+                        </div>
+                      ) : null}
+                    </DragOverlay>
+                  </DndContext>
                 )}
               </div>
               </AnimatedSection>

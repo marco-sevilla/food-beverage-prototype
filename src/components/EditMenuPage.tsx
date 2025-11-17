@@ -32,6 +32,53 @@ import { MobileMenuOrdering } from './MobileMenuOrdering';
 import { FOOD_ITEMS, convertToSectionItem } from '@/data/foodItems';
 import { AnimatedSection } from './PageTransition';
 
+// Import drag and drop components
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+  type Modifier,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { restrictToWindowEdges } from '@dnd-kit/modifiers';
+import { motion } from 'framer-motion';
+
+// Custom modifier to position drag overlay under cursor
+const snapCursorToDragOverlay: Modifier = ({ activatorEvent, draggingNodeRect, transform }) => {
+  if (activatorEvent && draggingNodeRect) {
+    const activatorCoordinates = {
+      x: 'clientX' in activatorEvent ? activatorEvent.clientX : 0,
+      y: 'clientY' in activatorEvent ? activatorEvent.clientY : 0,
+    };
+
+    const offsetX = activatorCoordinates.x - draggingNodeRect.left;
+    const offsetY = activatorCoordinates.y - draggingNodeRect.top;
+
+    return {
+      ...transform,
+      x: transform.x + offsetX - draggingNodeRect.width / 2,
+      y: transform.y + offsetY - draggingNodeRect.height / 2,
+    };
+  }
+
+  return transform;
+};
+
 // Import the CanarySidebar component
 import CanarySidebar, { SidebarVariant, type SidebarSection, type SidebarNavigationItem } from './CanarySidebar';
 
@@ -97,16 +144,98 @@ const ToggleSwitch: React.FC<ToggleSwitchProps> = ({ checked, onChange }) => (
   </button>
 );
 
-// Section Item component
+// Sortable Section Item component
 interface SectionItemProps {
+  id: string;
   title: string;
   subtitle: string;
   enabled: boolean;
   onToggle: (enabled: boolean) => void;
   onEdit: () => void;
   onDelete: () => void;
+  isDragging?: boolean;
 }
 
+const SortableSectionItem: React.FC<SectionItemProps> = ({ 
+  id,
+  title, 
+  subtitle, 
+  enabled, 
+  onToggle, 
+  onEdit, 
+  onDelete,
+  isDragging = false
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging: isSortableDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition: transition || 'transform 200ms cubic-bezier(0.25, 1, 0.5, 1)',
+  };
+
+  return (
+    <motion.div
+      ref={setNodeRef}
+      style={style}
+      className={clsx(
+        "flex items-center justify-between py-4 px-4 bg-white border-b border-neutral-200 last:border-b-0 relative",
+        isSortableDragging && "opacity-50 z-50",
+        isDragging && "shadow-xl scale-105"
+      )}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ 
+        opacity: isSortableDragging ? 0.5 : 1, 
+        y: 0,
+        scale: isDragging ? 1.02 : 1
+      }}
+      exit={{ opacity: 0, y: -20 }}
+      whileDrag={{
+        scale: 1.02,
+        boxShadow: "0 10px 25px rgba(0, 0, 0, 0.15)",
+        zIndex: 1000
+      }}
+    >
+      <div className="flex items-center gap-3">
+        <div 
+          className={clsx(
+            "cursor-grab text-canary-black-4 transition-colors duration-200 hover:text-canary-black-2 p-1 rounded active:cursor-grabbing",
+            isSortableDragging && "text-canary-blue-1 cursor-grabbing"
+          )}
+          {...attributes}
+          {...listeners}
+        >
+          <Icon path={mdiDrag} size={1} />
+        </div>
+        <div>
+          <div className="font-roboto text-body-sm font-medium text-canary-black-1">
+            {title}
+          </div>
+          <div className="font-roboto text-caption text-canary-black-4">
+            {subtitle}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <ToggleSwitch checked={enabled} onChange={onToggle} />
+        <Button variant="icon" onClick={onEdit}>
+          <Icon path={mdiPencil} size={0.8} />
+        </Button>
+        <Button variant="icon" onClick={onDelete}>
+          <Icon path={mdiDelete} size={0.8} color="#E40046" />
+        </Button>
+      </div>
+    </motion.div>
+  );
+};
+
+// Static Section Item component for drag overlay
 const SectionItem: React.FC<SectionItemProps> = ({ 
   title, 
   subtitle, 
@@ -115,9 +244,9 @@ const SectionItem: React.FC<SectionItemProps> = ({
   onEdit, 
   onDelete 
 }) => (
-  <div className="flex items-center justify-between py-4 px-4 bg-white border-b border-neutral-200 last:border-b-0">
+  <div className="flex items-center justify-between py-4 px-4 bg-white border border-neutral-200 rounded-lg shadow-xl">
     <div className="flex items-center gap-3">
-      <div className="cursor-move text-canary-black-4">
+      <div className="cursor-move text-canary-blue-1">
         <Icon path={mdiDrag} size={1} />
       </div>
       <div>
@@ -130,11 +259,11 @@ const SectionItem: React.FC<SectionItemProps> = ({
       </div>
     </div>
     <div className="flex items-center gap-3">
-      <ToggleSwitch checked={enabled} onChange={onToggle} />
-      <Button variant="icon" onClick={onEdit}>
+      <ToggleSwitch checked={enabled} onChange={() => {}} />
+      <Button variant="icon" onClick={() => {}}>
         <Icon path={mdiPencil} size={0.8} />
       </Button>
-      <Button variant="icon" onClick={onDelete}>
+      <Button variant="icon" onClick={() => {}}>
         <Icon path={mdiDelete} size={0.8} color="#E40046" />
       </Button>
     </div>
@@ -194,6 +323,52 @@ export const EditMenuPage: React.FC<EditMenuPageProps> = ({
     }))
   );
   const [isCreateSectionModalOpen, setIsCreateSectionModalOpen] = useState(false);
+  
+  // Drag and drop state
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 3,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Find the active section for drag overlay
+  const activeSection = useMemo(() => {
+    return activeId ? localSections.find(section => section.id === activeId) : null;
+  }, [activeId, localSections]);
+
+  // Drag handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      setLocalSections((sections) => {
+        const oldIndex = sections.findIndex(section => section.id === active.id);
+        const newIndex = sections.findIndex(section => section.id === over.id);
+        
+        const reorderedSections = arrayMove(sections, oldIndex, newIndex);
+        
+        // Save the new order to persistence
+        import('@/utils/persistence').then(({ saveSectionOrder }) => {
+          const menuId = internalMenuName || externalMenuName || 'default-menu';
+          saveSectionOrder(menuId, reorderedSections.map(s => s.id));
+        });
+        
+        return reorderedSections;
+      });
+    }
+    
+    setActiveId(null);
+  };
 
   // Helper function to get sample items for a section
   const getSampleItemsForSection = (sectionTitle: string) => {
@@ -272,6 +447,10 @@ export const EditMenuPage: React.FC<EditMenuPageProps> = ({
     ));
   };
 
+  const handleDeleteSection = (id: string) => {
+    setLocalSections(localSections.filter(section => section.id !== id));
+  };
+
   const handleSave = () => {
     const success = onSave?.(externalMenuName, internalMenuName, isNewMenu || false);
     // onSave handles showing toast messages
@@ -283,10 +462,6 @@ export const EditMenuPage: React.FC<EditMenuPageProps> = ({
     if (onCreateSection) {
       onCreateSection(sectionName);
     }
-  };
-
-  const handleDeleteSection = (id: string) => {
-    setLocalSections(localSections.filter(section => section.id !== id));
   };
 
   // Create sidebar sections
@@ -524,27 +699,67 @@ export const EditMenuPage: React.FC<EditMenuPageProps> = ({
                     <Icon path={mdiPlus} size={1} />
                   </Button>
                 </div>
-                <div className="border border-neutral-200 rounded-lg overflow-hidden">
-                  {localSections.length === 0 ? (
-                    <div className="py-8 px-4 text-center">
-                      <p className="text-canary-black-4 font-roboto text-body-sm">
-                        No sections yet. Click the + button to add your first section.
-                      </p>
-                    </div>
-                  ) : (
-                    localSections.map((section) => (
-                      <SectionItem
-                        key={section.id}
-                        title={section.title}
-                        subtitle={section.subtitle}
-                        enabled={section.enabled}
-                        onToggle={(enabled) => handleSectionToggle(section.id, enabled)}
-                        onEdit={() => onEditSection?.(section.id)}
-                        onDelete={() => handleDeleteSection(section.id)}
-                      />
-                    ))
-                  )}
-                </div>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                >
+                  <div className="border border-neutral-200 rounded-lg overflow-hidden">
+                    {localSections.length === 0 ? (
+                      <div className="py-8 px-4 text-center">
+                        <p className="text-canary-black-4 font-roboto text-body-sm">
+                          No sections yet. Click the + button to add your first section.
+                        </p>
+                      </div>
+                    ) : (
+                      <SortableContext items={localSections.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                        {localSections.map((section) => (
+                          <SortableSectionItem
+                            key={section.id}
+                            id={section.id}
+                            title={section.title}
+                            subtitle={section.subtitle}
+                            enabled={section.enabled}
+                            onToggle={(enabled) => handleSectionToggle(section.id, enabled)}
+                            onEdit={() => onEditSection?.(section.id)}
+                            onDelete={() => handleDeleteSection(section.id)}
+                          />
+                        ))}
+                      </SortableContext>
+                    )}
+                  </div>
+                  
+                  {/* Drag Overlay */}
+                  <DragOverlay
+                    dropAnimation={{
+                      duration: 200,
+                      easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+                    }}
+                    modifiers={[snapCursorToDragOverlay]}
+                    zIndex={9999}
+                  >
+                    {activeSection ? (
+                      <div style={{ 
+                        transform: 'rotate(3deg)',
+                        cursor: 'grabbing',
+                        pointerEvents: 'none',
+                        opacity: 0.95,
+                      }}>
+                        <SectionItem
+                          id={activeSection.id}
+                          title={activeSection.title}
+                          subtitle={activeSection.subtitle}
+                          enabled={activeSection.enabled}
+                          onToggle={() => {}}
+                          onEdit={() => {}}
+                          onDelete={() => {}}
+                          isDragging={true}
+                        />
+                      </div>
+                    ) : null}
+                  </DragOverlay>
+                </DndContext>
               </div>
               </AnimatedSection>
 

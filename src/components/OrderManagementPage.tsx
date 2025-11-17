@@ -715,7 +715,7 @@ export const OrderManagementPage: React.FC<OrderManagementPageProps> = ({
                     size={InputSize.NORMAL}
                   />
                 </div>
-                <div className="w-64">
+                <div className="w-80">
                   <CanaryInputDateRange
                     size={InputSize.NORMAL}
                   />

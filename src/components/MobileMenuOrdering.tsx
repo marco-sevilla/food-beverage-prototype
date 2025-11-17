@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import Icon from '@mdi/react';
 import { 
   mdiArrowLeft, 
@@ -543,7 +543,7 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
   const [demoAmPm, setDemoAmPm] = useState<'AM' | 'PM'>(savedData.demoTime?.ampm || 'AM');
 
   // Initialize with the first available menu or saved menu
-  const menuNames = menus.map(menu => menu.name);
+  const menuNames = useMemo(() => menus.map(menu => menu.name), [menus]);
   const [selectedMenuName, setSelectedMenuName] = useState(() => {
     // Use saved menu if it exists in the current menu list, otherwise use default
     if (savedData.selectedMenu && menuNames.includes(savedData.selectedMenu)) {
@@ -600,7 +600,7 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
         setSelectedMenuName(newDefaultMenu);
       }
     }
-  }, [demoDay, demoHour, demoMinute, demoAmPm, menuNames, hasUserSelectedMenu, selectedMenuName]);
+  }, [demoDay, demoHour, demoMinute, demoAmPm, menuNames, hasUserSelectedMenu]);
 
   // Check if content is scrollable to determine if tabs should be shown
   useEffect(() => {

@@ -192,7 +192,7 @@ const CanaryInputDateRange = forwardRef<HTMLDivElement, CanaryInputDateRangeProp
         <div
           ref={ref}
           className={clsx(
-            "relative flex items-center gap-2 rounded border font-['Roboto',sans-serif] font-normal leading-[1.5]",
+            "relative flex items-center gap-0 rounded border font-['Roboto',sans-serif] font-normal leading-[1.5]",
             "transition-[border-color,background-color] duration-200",
             sizeClasses[size],
             size === InputSize.TABLET && "px-4 py-3",
@@ -206,7 +206,7 @@ const CanaryInputDateRange = forwardRef<HTMLDivElement, CanaryInputDateRangeProp
           )}
         >
           {/* Start Date */}
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-0 shrink-0">
             <input
               ref={startMonthRef}
               type="text"
@@ -217,7 +217,7 @@ const CanaryInputDateRange = forwardRef<HTMLDivElement, CanaryInputDateRangeProp
               placeholder="MM"
               disabled={isDisabled}
               className={clsx(
-                "w-6 bg-transparent outline-none border-none text-center",
+                "w-10 bg-transparent outline-none border-none text-center",
                 "placeholder:text-gray-400 font-['Roboto',sans-serif] text-[14px]",
                 isDisabled && "cursor-not-allowed"
               )}
@@ -234,7 +234,7 @@ const CanaryInputDateRange = forwardRef<HTMLDivElement, CanaryInputDateRangeProp
               placeholder="DD"
               disabled={isDisabled}
               className={clsx(
-                "w-6 bg-transparent outline-none border-none text-center",
+                "w-10 bg-transparent outline-none border-none text-center",
                 "placeholder:text-gray-400 font-['Roboto',sans-serif] text-[14px]",
                 isDisabled && "cursor-not-allowed"
               )}
@@ -251,7 +251,7 @@ const CanaryInputDateRange = forwardRef<HTMLDivElement, CanaryInputDateRangeProp
               placeholder="YYYY"
               disabled={isDisabled}
               className={clsx(
-                "w-9 bg-transparent outline-none border-none text-center",
+                "w-16 bg-transparent outline-none border-none text-center",
                 "placeholder:text-gray-400 font-['Roboto',sans-serif] text-[14px]",
                 isDisabled && "cursor-not-allowed"
               )}
@@ -260,10 +260,10 @@ const CanaryInputDateRange = forwardRef<HTMLDivElement, CanaryInputDateRangeProp
           </div>
 
           {/* Separator */}
-          <span className="text-gray-500 select-none shrink-0 mx-2 font-['Roboto',sans-serif] text-[14px]">—</span>
+          <span className="text-gray-500 select-none shrink-0 mx-0.5 font-['Roboto',sans-serif] text-[14px]">—</span>
 
           {/* End Date */}
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-0 shrink-0">
             <input
               ref={endMonthRef}
               type="text"
@@ -274,7 +274,7 @@ const CanaryInputDateRange = forwardRef<HTMLDivElement, CanaryInputDateRangeProp
               placeholder="MM"
               disabled={isDisabled}
               className={clsx(
-                "w-6 bg-transparent outline-none border-none text-center",
+                "w-10 bg-transparent outline-none border-none text-center",
                 "placeholder:text-gray-400 font-['Roboto',sans-serif] text-[14px]",
                 isDisabled && "cursor-not-allowed"
               )}
@@ -291,7 +291,7 @@ const CanaryInputDateRange = forwardRef<HTMLDivElement, CanaryInputDateRangeProp
               placeholder="DD"
               disabled={isDisabled}
               className={clsx(
-                "w-6 bg-transparent outline-none border-none text-center",
+                "w-10 bg-transparent outline-none border-none text-center",
                 "placeholder:text-gray-400 font-['Roboto',sans-serif] text-[14px]",
                 isDisabled && "cursor-not-allowed"
               )}
@@ -308,7 +308,7 @@ const CanaryInputDateRange = forwardRef<HTMLDivElement, CanaryInputDateRangeProp
               placeholder="YYYY"
               disabled={isDisabled}
               className={clsx(
-                "w-9 bg-transparent outline-none border-none text-center",
+                "w-16 bg-transparent outline-none border-none text-center",
                 "placeholder:text-gray-400 font-['Roboto',sans-serif] text-[14px]",
                 isDisabled && "cursor-not-allowed"
               )}

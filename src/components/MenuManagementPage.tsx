@@ -858,7 +858,7 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
       <AnimatedSection delay={240}>
         <button
           onClick={onGoToOrdering}
-          className="fixed bottom-6 right-6 bg-canary-blue-1 text-white px-6 py-3 rounded-lg font-roboto font-medium text-body-sm shadow-lg hover:opacity-90 transition-opacity z-50"
+          className="fixed bottom-6 right-6 bg-canary-blue-1 text-white px-4 py-0 h-10 rounded font-roboto font-medium text-sm shadow-lg hover:opacity-90 transition-opacity z-50 whitespace-nowrap flex items-center justify-center"
         >
           Go to ordering flow
         </button>

@@ -17,6 +17,8 @@ export interface PersistedData {
   items?: Record<string, any>; // itemId -> item data mapping
   menuAvailability?: Record<string, DayAvailability[]>; // menuName -> availability settings
   prepTimeMinutes?: number; // average order prep time in minutes
+  sectionOrders?: Record<string, string[]>; // menuId -> ordered section IDs
+  itemOrders?: Record<string, string[]>; // sectionId -> ordered item IDs
   lastSaved?: number;
 }
 
@@ -152,4 +154,87 @@ export const deleteItem = (itemId: string) => {
     items: remainingItems,
     images: remainingImages 
   });
+};
+
+// Section order persistence helpers
+export const saveSectionOrder = (menuId: string, sectionIds: string[]) => {
+  const existing = loadData();
+  const sectionOrders = existing.sectionOrders || {};
+  saveData({ 
+    ...existing, 
+    sectionOrders: { 
+      ...sectionOrders, 
+      [menuId]: sectionIds 
+    } 
+  });
+};
+
+export const getSectionOrder = (menuId: string): string[] | undefined => {
+  const data = loadData();
+  return data.sectionOrders?.[menuId];
+};
+
+// Item order persistence helpers
+export const saveItemOrder = (sectionId: string, itemIds: string[]) => {
+  const existing = loadData();
+  const itemOrders = existing.itemOrders || {};
+  saveData({ 
+    ...existing, 
+    itemOrders: { 
+      ...itemOrders, 
+      [sectionId]: itemIds 
+    } 
+  });
+};
+
+export const getItemOrder = (sectionId: string): string[] | undefined => {
+  const data = loadData();
+  return data.itemOrders?.[sectionId];
+};
+
+// Helper functions to apply ordering to arrays
+export const applySectionOrder = <T extends { id: string }>(sections: T[], menuId: string): T[] => {
+  const order = getSectionOrder(menuId);
+  if (!order) return sections;
+  
+  // Create a map for quick lookup
+  const sectionMap = new Map(sections.map(section => [section.id, section]));
+  
+  // Return sections in saved order, adding any new sections at the end
+  const orderedSections: T[] = [];
+  for (const id of order) {
+    const section = sectionMap.get(id);
+    if (section) {
+      orderedSections.push(section);
+      sectionMap.delete(id);
+    }
+  }
+  
+  // Add any remaining sections that weren't in the saved order
+  orderedSections.push(...Array.from(sectionMap.values()));
+  
+  return orderedSections;
+};
+
+export const applyItemOrder = <T extends { id: string }>(items: T[], sectionId: string): T[] => {
+  const order = getItemOrder(sectionId);
+  if (!order) return items;
+  
+  // Create a map for quick lookup
+  const itemMap = new Map(items.map(item => [item.id, item]));
+  
+  // Return items in saved order, adding any new items at the end
+  const orderedItems: T[] = [];
+  for (const id of order) {
+    const item = itemMap.get(id);
+    if (item) {
+      orderedItems.push(item);
+      itemMap.delete(id);
+    }
+  }
+  
+  // Add any remaining items that weren't in the saved order
+  orderedItems.push(...Array.from(itemMap.values()));
+  
+  return orderedItems;
 };
