@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Icon from '@mdi/react';
 import clsx from 'clsx';
 import { colors, spacing } from '@/lib/design-tokens';
-import { saveImage, getImage } from '@/utils/persistence';
+import { saveImage, getImage, saveItem, getItem } from '@/utils/persistence';
+import { AnimatedSection } from './PageTransition';
 import { 
   mdiArrowLeft, 
   mdiHome, 
@@ -25,7 +26,9 @@ import {
   mdiChevronDown,
   mdiUpload,
   mdiDelete,
-  mdiPencil
+  mdiPencil,
+  mdiMinus,
+  mdiPlus
 } from '@mdi/js';
 
 // Import the CanarySidebar component
@@ -216,6 +219,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ label, image, onImageChange }
 interface FoodItem {
   id: string;
   name: string;
+  internalName?: string;
   description: string;
   price: number;
   image?: string;
@@ -234,34 +238,59 @@ export const EditItemPage: React.FC<EditItemPageProps> = ({
   onSave
 }) => {
   const [formData, setFormData] = useState<FoodItem>({
-    id: item?.id || '',
+    id: item?.id || `item-${Date.now()}`, // Generate ID if not provided
     name: item?.name || '',
+    internalName: item?.internalName || item?.name || '',
     description: item?.description || '',
     price: item?.price || 0,
     image: item?.image
   });
 
-  // Load saved image when component mounts
+  // Load saved data when component mounts
   useEffect(() => {
     if (item?.id) {
+      const savedItem = getItem(item.id);
       const savedImage = getImage(item.id);
-      if (savedImage) {
-        setFormData(prev => ({
-          ...prev,
-          image: savedImage
-        }));
+      
+      if (savedItem) {
+        // Load all saved item data, prioritizing saved data
+        // For images, check both the item data and separate image storage
+        const imageToUse = savedItem.image || savedImage || item.image;
+        setFormData({
+          id: item.id,
+          name: savedItem.name || item.name || '',
+          internalName: savedItem.internalName || item.internalName || savedItem.name || item.name || '',
+          description: savedItem.description || item.description || '', 
+          price: savedItem.price || item.price || 0,
+          image: imageToUse
+        });
+      } else {
+        // Use original item data if no saved data exists, but check for saved images
+        setFormData({
+          id: item.id,
+          name: item.name || '',
+          internalName: item.internalName || item.name || '',
+          description: item.description || '',
+          price: item.price || 0,
+          image: savedImage || item.image
+        });
       }
     }
   }, [item?.id]);
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
+
   const handleSave = () => {
     // Validation
     const newErrors: { [key: string]: string } = {};
     
     if (!formData.name.trim()) {
-      newErrors.name = 'Title is required';
+      newErrors.name = 'External item name is required';
+    }
+    
+    if (!formData.internalName?.trim()) {
+      newErrors.internalName = 'Internal item name is required';
     }
     
     if (formData.price <= 0) {
@@ -274,19 +303,43 @@ export const EditItemPage: React.FC<EditItemPageProps> = ({
     }
 
     setErrors({});
+    
+    // Always save to localStorage for persistence across sessions
+    if (formData.id) {
+      saveItem(formData.id, formData);
+    }
+    
+    // Always call the onSave callback to update the parent component state
     onSave?.(formData);
   };
 
   const updateFormData = (field: keyof FoodItem, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setFormData(prev => {
+      const updatedData = {
+        ...prev,
+        [field]: value
+      };
+      
+      // Auto-sync internal name when external name changes (only if they were the same)
+      if (field === 'name' && prev.name === prev.internalName) {
+        updatedData.internalName = value;
+      }
+      
+      // Save image to both localStorage systems when image changes
+      if (field === 'image' && formData.id) {
+        if (value) {
+          // Save image separately and also update the complete item data
+          saveImage(formData.id, value);
+          saveItem(formData.id, updatedData);
+        } else {
+          // If image is being removed, update both storage systems
+          saveItem(formData.id, updatedData);
+        }
+      }
+      
+      return updatedData;
+    });
     
-    // Save image to localStorage when image changes
-    if (field === 'image' && value && formData.id) {
-      saveImage(formData.id, value);
-    }
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({
@@ -456,43 +509,72 @@ export const EditItemPage: React.FC<EditItemPageProps> = ({
         {/* Content Area */}
         <div className="flex-1 flex bg-white overflow-hidden">
           {/* Left Configuration Panel */}
-          <div className="flex-1 max-w-lg border-r border-neutral-200 flex flex-col">
+          <div className="flex-1 border-r border-neutral-200 flex flex-col">
             {/* Page Header */}
-            <div className="border-b border-neutral-200 py-4 px-6 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={onBack}
-                  className="flex items-center justify-center p-2 hover:bg-gray-50 rounded"
-                >
-                  <Icon path={mdiArrowLeft} size={1} />
-                </button>
-                <h1 className="font-roboto text-subtitle font-medium text-canary-black-1">
-                  {isNewItem ? 'Create item' : 'Edit item'}
-                </h1>
+            <AnimatedSection delay={0}>
+              <div className="border-b border-neutral-200 py-4 px-6 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={onBack}
+                    className="flex items-center justify-center p-2 hover:bg-gray-50 rounded"
+                  >
+                    <Icon path={mdiArrowLeft} size={1} />
+                  </button>
+                  <h1 className="font-roboto text-subtitle font-medium text-canary-black-1">
+                    {isNewItem ? 'Create item' : 'Edit item'}
+                  </h1>
+                </div>
+                <Button onClick={handleSave}>Save</Button>
               </div>
-              <Button onClick={handleSave}>Save</Button>
-            </div>
+            </AnimatedSection>
 
             {/* Configuration Content */}
             <div className="flex-1 overflow-auto py-8 px-6 space-y-6">
               {/* Basic Info Section */}
-              <div className="border border-neutral-200 rounded-lg p-6 bg-white">
+              <AnimatedSection delay={80}>
+                <div className="border border-neutral-200 rounded-lg p-6 bg-white">
                 <h2 className="font-roboto text-subtitle font-semibold text-canary-black-1 mb-6">
                   Basic info
                 </h2>
                 
                 <div className="space-y-4">
-                  {/* Title Field */}
+                  {/* External Item Name */}
                   <div>
-                    <Input
-                      label="Title"
+                    <label className="block font-roboto text-body-sm font-medium text-canary-black-1 mb-2">
+                      External item name*
+                    </label>
+                    <input
+                      type="text"
                       value={formData.name}
-                      onChange={(value) => updateFormData('name', value)}
-                      placeholder="Enter item title"
-                      required
+                      onChange={(e) => updateFormData('name', e.target.value)}
+                      className="w-full h-12 px-4 border border-neutral-200 rounded font-roboto text-body-sm text-canary-black-1 focus:outline-none focus:ring-2 focus:ring-canary-blue-1 focus:border-canary-blue-1"
+                      placeholder="Enter external item name"
                     />
+                    <p className="mt-1 font-roboto text-caption text-canary-black-4">
+                      This name will be displayed to guests and the public.
+                    </p>
                     {errors.name && (
                       <p className="mt-1 text-sm text-red-500">{errors.name}</p>
+                    )}
+                  </div>
+
+                  {/* Internal Item Name */}
+                  <div>
+                    <label className="block font-roboto text-body-sm font-medium text-canary-black-1 mb-2">
+                      Internal item name*
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.internalName || ''}
+                      onChange={(e) => updateFormData('internalName', e.target.value)}
+                      className="w-full h-12 px-4 border border-neutral-200 rounded font-roboto text-body-sm text-canary-black-1 focus:outline-none focus:ring-2 focus:ring-canary-blue-1 focus:border-canary-blue-1"
+                      placeholder="Enter internal item name"
+                    />
+                    <p className="mt-1 font-roboto text-caption text-canary-black-4">
+                      This name will be used for internal staff views and operations.
+                    </p>
+                    {errors.internalName && (
+                      <p className="mt-1 text-sm text-red-500">{errors.internalName}</p>
                     )}
                   </div>
 
@@ -520,24 +602,140 @@ export const EditItemPage: React.FC<EditItemPageProps> = ({
                   </div>
                 </div>
               </div>
+              </AnimatedSection>
 
               {/* Image Section */}
-              <div className="border border-neutral-200 rounded-lg p-6 bg-white">
-                <ImageUpload
-                  label="Image"
-                  image={formData.image}
-                  onImageChange={(image) => updateFormData('image', image)}
-                />
-              </div>
+              <AnimatedSection delay={160}>
+                <div className="border border-neutral-200 rounded-lg p-6 bg-white">
+                  <ImageUpload
+                    label="Image"
+                    image={formData.image}
+                    onImageChange={(image) => updateFormData('image', image)}
+                  />
+                </div>
+              </AnimatedSection>
             </div>
           </div>
 
-          {/* Right Mobile Preview Placeholder */}
-          <div className="flex-1 bg-canary-black-6 flex items-center justify-center">
-            <span className="text-canary-black-4 font-roboto text-body-sm">
-              Mobile preview (coming soon)
-            </span>
-          </div>
+          {/* Right Mobile Preview Panel */}
+          <AnimatedSection delay={240} className="flex-1">
+            <div className="h-full bg-gray-100 flex flex-col items-center py-8 px-6">
+              
+              {/* Mobile Preview Container */}
+              <div className="flex-1 w-full max-w-md flex items-center justify-center">
+                <div 
+                  className="relative bg-white overflow-hidden shadow-xl"
+                  style={{
+                    width: '320px',
+                    height: '640px', 
+                    borderRadius: '28px',
+                    boxShadow: '0px 8px 16px 0px rgba(0,0,0,0.16)'
+                  }}
+                >
+                  {/* Mobile Preview Content - Item Details Modal */}
+                  <div className="h-full flex flex-col relative bg-white">
+
+                    {/* Item Image */}
+                    <div className="relative w-full h-56 bg-gray-200 flex items-center justify-center" style={{
+                      borderTopLeftRadius: '28px',
+                      borderTopRightRadius: '28px'
+                    }}>
+                      {formData.image ? (
+                        <img 
+                          src={formData.image} 
+                          alt={formData.name}
+                          className="w-full h-full object-cover"
+                          style={{
+                            borderTopLeftRadius: '28px',
+                            borderTopRightRadius: '28px'
+                          }}
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center text-gray-400">
+                          <Icon path={mdiUpload} size={2} />
+                          <span className="mt-2 font-roboto text-sm">No image</span>
+                        </div>
+                      )}
+                      
+                      {/* Close Button */}
+                      <button className="absolute top-4 left-4 w-10 h-10 bg-white rounded-md shadow-lg flex items-center justify-center opacity-50">
+                        <Icon path={mdiArrowLeft} size={1} />
+                      </button>
+                    </div>
+
+                    {/* Scrollable Content */}
+                    <div 
+                      className="flex-1 overflow-y-scroll bg-white px-4" 
+                      style={{ 
+                        minHeight: 0,
+                        maxHeight: '100%',
+                        WebkitOverflowScrolling: 'touch'
+                      }}
+                    >
+                      <div style={{ pointerEvents: 'none' }} className="pb-20">
+                        {/* Item Content */}
+                        <div className="py-4">
+                          {/* Item Title */}
+                          <h2 className="font-roboto text-[28px] font-medium text-black leading-[42px] mb-3">
+                            {formData.name || 'Item Name'}
+                          </h2>
+
+                          {/* Description */}
+                          {formData.description && (
+                            <p className="font-roboto text-base text-black leading-[24px] mb-3">
+                              {formData.description}
+                            </p>
+                          )}
+
+                          {/* Price */}
+                          <div className="mb-6">
+                            <span className="font-roboto text-base text-black">
+                              ${formData.price.toFixed(2)}
+                            </span>
+                          </div>
+
+                          {/* Quantity Selector */}
+                          <div className="flex items-center gap-2 pt-4 mb-6">
+                            <button className="w-12 h-12 bg-black rounded flex items-center justify-center opacity-50">
+                              <Icon path={mdiMinus} size={1} color="white" />
+                            </button>
+                            <span className="font-roboto text-lg font-bold text-black w-8 text-center tracking-wide">
+                              1
+                            </span>
+                            <button className="w-12 h-12 bg-black rounded flex items-center justify-center">
+                              <Icon path={mdiPlus} size={1} color="white" />
+                            </button>
+                          </div>
+
+                          {/* Special Requests */}
+                          <div className="mb-6">
+                            <label className="block font-roboto text-sm text-black mb-1">
+                              Special requests
+                            </label>
+                            <textarea
+                              className="w-full h-20 px-2 py-3 border border-gray-400 rounded text-gray-600 font-roboto text-lg resize-none"
+                              placeholder="Special requests"
+                              style={{ pointerEvents: 'none' }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Sticky Add to Cart Button */}
+                    <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4">
+                      <button 
+                        className="w-full h-12 bg-black text-white rounded font-roboto text-lg font-medium opacity-50 cursor-not-allowed"
+                        disabled
+                      >
+                        Add to cart ${formData.price.toFixed(2)}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </AnimatedSection>
         </div>
       </div>
     </div>

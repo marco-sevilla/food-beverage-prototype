@@ -16,7 +16,7 @@ import { MenuItemPlaceholder } from './MenuItemPlaceholder';
 import { OrderingClosedModal } from './OrderingClosedModal';
 import { MenuUnavailableMessage } from './MenuUnavailableMessage';
 import { isMenuAvailable, getMenuAvailabilityInfo, getDefaultMenu } from '@/utils/menuAvailability';
-import { loadData, saveDemoTime, saveSelectedMenu, saveCart, getImage } from '@/utils/persistence';
+import { loadData, saveDemoTime, saveSelectedMenu, saveCart, getImage, getItem } from '@/utils/persistence';
 
 // Time Controls Component
 interface TimeControlsProps {
@@ -433,8 +433,9 @@ const MenuItem: React.FC<MenuItemProps> = ({
   // Generate a consistent mock price based on item name hash
   const mockPrice = Math.floor((item.name.length * 7 + item.id.length * 3) % 30) + 15;
   
-  // Get saved image for this item
-  const savedImage = getImage(item.id) || item.image;
+  // Get saved image for this item (check both storage systems)
+  const savedItem = getItem(item.id);
+  const savedImage = savedItem?.image || getImage(item.id) || item.image;
 
   return (
     <div className="flex items-center gap-4 p-3">

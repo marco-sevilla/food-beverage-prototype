@@ -1,0 +1,234 @@
+# Canary Food & Beverage Prototype - README & CHANGELOG
+
+## Project Overview
+This is a prototype for Canary's Food & Beverage ordering management system. The system allows hotel staff to manage incoming food orders, process approvals/denials, and configure menu settings.
+
+## Recent Development Session Summary
+This changelog documents all enhancements made during the development session focused on improving the order management workflow, visual feedback systems, and user experience.
+
+---
+
+## CHANGELOG
+
+### Version Updates (Latest Session)
+
+#### 🎨 Modal Animation System Enhancement
+**Files Modified:** 
+- `/src/components/AnimatedModal.tsx`
+- `/src/components/OrderDenialModal.tsx`
+
+**Changes:**
+- Implemented sophisticated modal animations with background blur effects
+- Added asymmetric timing: 300ms open transition, 150ms close transition for snappier exit
+- Enhanced user experience with smooth fade-in/fade-out effects
+- Applied consistent animation system across all modals
+
+#### 📧 Email Preview System
+**Files Modified:**
+- `/src/components/EmailPreview.tsx` (new)
+- `/src/components/OrderDetailsSideSheet.tsx`
+- `/src/components/AppRouter.tsx`
+
+**Changes:**
+- Built complete email preview functionality for order acceptance notifications
+- Extracted UI design from Figma specifications
+- Implemented hotel branding integration in email templates
+- Added "View Email" functionality in order details sidesheet
+- Created page transitions for email preview workflow
+
+#### 🚫 Order Denial Flow Implementation
+**Files Modified:**
+- `/src/components/OrderDenialModal.tsx` (new)
+- `/src/components/temp-components/CanaryChip.tsx` (new)
+- `/src/components/OrderDetailsSideSheet.tsx`
+- `/src/components/OrderManagementPage.tsx`
+
+**Changes:**
+- Created comprehensive order denial workflow
+- Implemented reason selection with custom chip components
+- Added smooth animations for conditional comment field (when "Other" selected)
+- Integrated denial confirmation states in sidesheets
+- Built complete modal with rounded corners matching design system
+
+#### 📊 Order Management Table Enhancements
+**Files Modified:**
+- `/src/components/OrdersTable.tsx`
+- `/src/components/OrderManagementPage.tsx`
+
+**Changes:**
+- Added fourth table for cancelled orders
+- Reordered table columns to prioritize "TIME ELAPSED" as first column
+- Implemented dynamic column headers: "DELIVERY TIME" for delivered orders, "TIME ELAPSED" for others
+- Fixed "View Details" button functionality by filtering orders with missing details
+- Enhanced data consistency between orders and orderDetails
+
+#### 📱 Order Details Sidesheet State Management
+**Files Modified:**
+- `/src/components/OrderDetailsSideSheet.tsx`
+
+**Changes:**
+- Updated sidesheet to show different states based on order status
+- Pending orders: Show approve/deny buttons
+- Accepted/preparing/delivered orders: Show green confirmation container with "View Email" link
+- Cancelled orders: Show red denial confirmation container
+- Improved state management and visual feedback
+
+#### ⚙️ Settings Implementation - Order Prep Time
+**Files Modified:**
+- `/src/components/MenuManagementPage.tsx`
+- `/src/components/temp-components/CanarySelect.tsx`
+- `/src/components/AppRouter.tsx`
+- `/src/utils/persistence.ts`
+
+**Changes:**
+- Added "Average order prep time" setting in Menu Management > Settings tab
+- Implemented dropdown with time options (15-60 minutes)
+- Created proper state management and persistence
+- Built UI matching Figma specifications
+- Added comprehensive description text for setting context
+
+#### 🎯 Dynamic Time Threshold System
+**Files Modified:**
+- `/src/components/OrdersTable.tsx`
+- `/src/components/OrderDetailsSideSheet.tsx`
+- `/src/components/temp-components/CanaryTag.tsx`
+- `/src/components/OrderManagementPage.tsx`
+- `/src/components/AppRouter.tsx`
+
+**Changes:**
+- Implemented dynamic color thresholds for time elapsed tags
+- Created 3-tier color system based on prep time settings:
+  * 🟢 Green (SUCCESS): 0-50% of prep time = Healthy status
+  * 🟡 Yellow (WARNING): 50-80% of prep time = Needs attention
+  * 🔴 Red (ERROR): 80%+ of prep time = Critical status
+- Applied consistent color system across all order tables AND sidesheets
+- Real-time threshold updates when prep time setting changes
+- Used existing CanaryTag component colors for design consistency
+
+#### 🔔 Notification Badge System
+**Files Modified:**
+- `/src/components/OrderManagementPage.tsx`
+- `/src/components/CanarySidebar.tsx` (leveraged existing badge system)
+
+**Changes:**
+- Added red notification badge to F&B Ordering sidebar button
+- Displays count of pending orders awaiting attention
+- Badge appears/disappears dynamically based on pending orders count
+- Used component library design with proper red color (#f16682)
+- Real-time updates as orders are processed
+
+---
+
+## Technical Architecture
+
+### Component Structure
+```
+/src/components/
+├── OrderManagementPage.tsx          # Main order management interface
+├── OrdersTable.tsx                  # Reusable table component with dynamic colors
+├── OrderDetailsSideSheet.tsx        # Order details with state-aware UI
+├── OrderDenialModal.tsx            # Order denial workflow
+├── EmailPreview.tsx                # Email preview functionality
+├── MenuManagementPage.tsx          # Settings and menu management
+├── AnimatedModal.tsx               # Reusable modal with animations
+├── CanarySidebar.tsx               # Navigation sidebar with badges
+└── temp-components/
+    ├── CanaryTag.tsx               # Dynamic color tag system
+    ├── CanaryChip.tsx              # Selection chips for denial reasons
+    └── CanarySelect.tsx            # Dropdown for settings
+```
+
+### State Management
+- **AppRouter.tsx**: Central state management for prep time and navigation
+- **OrderManagementPage.tsx**: Order processing and filtering logic
+- **Persistence**: localStorage integration for settings and preferences
+
+### Design System Integration
+- Consistent use of CanaryTag colors (SUCCESS, WARNING, ERROR)
+- Component library adherence for all UI elements
+- Figma design extraction and implementation
+- Design tokens usage for colors and spacing
+
+---
+
+## Key Features Implemented
+
+### 1. **Enhanced Order Processing Workflow**
+- Smooth modal animations for better UX
+- Comprehensive denial flow with reason tracking
+- Email preview system for order confirmations
+- State-aware sidesheet displays
+
+### 2. **Visual Priority System**
+- Dynamic color coding for time-sensitive orders
+- Configurable prep time thresholds
+- Real-time visual feedback across all interfaces
+- Notification badges for pending orders
+
+### 3. **Improved Data Management**
+- Four-table organization (New, In Progress, Delivered, Cancelled)
+- Smart column ordering for operational efficiency
+- Data consistency fixes and error handling
+- Persistent settings with localStorage
+
+### 4. **Professional UI/UX**
+- Sophisticated animations and transitions
+- Component library design adherence
+- Responsive layouts and accessibility
+- Consistent visual hierarchy
+
+---
+
+## Configuration
+
+### Order Prep Time Settings
+Location: Menu Management > Settings > Average order prep time
+- Default: 30 minutes
+- Range: 15-60 minutes
+- Affects color thresholds across entire system
+- Persistent across sessions
+
+### Color Threshold Calculation
+- **Green (Healthy)**: 0-50% of configured prep time
+- **Yellow (Attention)**: 50-80% of configured prep time  
+- **Red (Critical)**: 80%+ of configured prep time
+
+---
+
+## Future Enhancement Opportunities
+
+### Potential Improvements
+1. **Advanced Analytics Dashboard**
+2. **Real-time Order Tracking**
+3. **Staff Performance Metrics**
+4. **Customer Communication Integration**
+5. **Mobile Staff Application**
+6. **Advanced Filtering and Search**
+7. **Bulk Order Operations**
+8. **Integration with POS Systems**
+
+### Technical Debt
+- Consider migrating to more robust state management (Redux/Zustand)
+- Implement comprehensive error boundaries
+- Add unit and integration tests
+- Optimize performance for large order volumes
+
+---
+
+## Development Notes
+
+### Code Quality Standards
+- TypeScript strict mode enabled
+- Component library pattern compliance
+- Consistent naming conventions
+- Comprehensive prop interfaces
+
+### Performance Considerations
+- Efficient re-rendering with proper dependency arrays
+- Optimized filtering and sorting algorithms
+- Minimal state updates for smooth animations
+- localStorage caching for settings
+
+---
+
+This prototype demonstrates a complete order management workflow with professional-grade UI/UX, dynamic visual feedback systems, and extensive customization capabilities. All changes maintain design system consistency while significantly enhancing operational efficiency for hotel staff.

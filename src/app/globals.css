@@ -45,3 +45,24 @@ a {
     color-scheme: dark;
   }
 }
+
+/* Page Transition Animations */
+.animate-item {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 400ms ease-out, transform 400ms ease-out;
+}
+
+.animate-item.animate-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Support for reduced motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .animate-item {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+}

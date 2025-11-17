@@ -130,7 +130,7 @@ export const MenuItemDetails: React.FC<MenuItemDetailsProps> = ({
 
         {/* Header Image (if exists) */}
         {item.image && (
-          <div className="relative h-58 w-full">
+          <div className="relative w-full" style={{ height: '230px' }}>
             <img 
               src={item.image}
               alt={item.name}

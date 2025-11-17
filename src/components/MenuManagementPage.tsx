@@ -1,11 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Icon from '@mdi/react';
 import clsx from 'clsx';
 import { colors, spacing } from '@/lib/design-tokens';
+import { AnimatedSection } from './PageTransition';
 import { CreateMenuModal } from './CreateMenuModal';
+import { CreateItemModal } from './CreateItemModal';
 import { DeleteMenuModal } from './DeleteMenuModal';
+import { DeleteItemModal } from './DeleteItemModal';
 import { FOOD_ITEMS, formatMenuDisplay, type FoodItem } from '@/data/foodItems';
 import { 
   mdiArrowLeft, 
@@ -34,27 +37,31 @@ import {
 } from '@mdi/js';
 // Import the CanarySidebar component
 import CanarySidebar, { SidebarVariant, type SidebarSection, type SidebarNavigationItem } from './CanarySidebar';
+import CanarySelect, { type CanarySelectOption } from './temp-components/CanarySelect';
+import { InputSize } from './temp-components/types';
 
 // Tab component using component library patterns
 interface TabProps {
   children: React.ReactNode;
   active?: boolean;
   onClick?: () => void;
+  tabRef?: React.RefObject<HTMLButtonElement>;
 }
 
-const Tab: React.FC<TabProps> = ({ children, active = false, onClick }) => (
+const Tab: React.FC<TabProps> = ({ children, active = false, onClick, tabRef }) => (
   <button 
+    ref={tabRef}
     className="flex flex-col items-start overflow-hidden cursor-pointer bg-transparent border-none outline-none" 
     onClick={onClick}
   >
     <div className="flex items-center justify-center py-1 px-4 gap-2">
-      <span className={`font-roboto text-body-sm font-medium ${
+      <span className={`font-roboto text-body-sm font-medium transition-colors duration-200 ${
         active ? 'text-canary-blue-1' : 'text-canary-black-2'
       }`}>
         {children}
       </span>
     </div>
-    <div className={`h-1 w-full ${active ? 'bg-canary-blue-1' : 'bg-transparent'}`} />
+    <div className="h-1 w-full bg-transparent" />
   </button>
 );
 
@@ -152,6 +159,7 @@ const ToggleSwitch: React.FC<ToggleSwitchProps> = ({ checked, onChange }) => (
 interface FoodItemProps {
   id: string;
   name: string;
+  internalName?: string;
   image: string;
   menus: string[];
   price: number;
@@ -165,6 +173,7 @@ interface FoodItemProps {
 const FoodItem: React.FC<FoodItemProps> = ({ 
   id, 
   name, 
+  internalName,
   image, 
   menus, 
   price, 
@@ -194,9 +203,16 @@ const FoodItem: React.FC<FoodItemProps> = ({
           <Icon path={mdiImage} size={0.6} color="#666666" />
         </div>
       )}
-      <span className="font-roboto text-body-sm font-medium text-canary-black-1 truncate">
-        {name}
-      </span>
+      <div className="flex flex-col min-w-0">
+        <span className="font-roboto text-body-sm font-medium text-canary-black-1 truncate">
+          {internalName || name}
+        </span>
+        {internalName && (
+          <span className="font-roboto text-caption text-canary-black-4 truncate">
+            {name}
+          </span>
+        )}
+      </div>
     </div>
     
     {/* Menus Column */}
@@ -231,9 +247,13 @@ interface MenuManagementPageProps {
   onDeleteMenu?: (menuName: string) => void;
   onPreviewMenu?: (menuName: string) => void;
   onEditItem?: (itemId: string) => void;
+  onUpdateItem?: (updatedItem: FoodItem) => void;
+  onShowToast?: (message: string, type: 'success' | 'error' | 'warning') => void;
   initialActiveTab?: 'menus' | 'item-library' | 'settings';
   onGoToOrdering?: () => void;
   onBackToOrders?: () => void;
+  prepTimeMinutes?: number;
+  onUpdatePrepTime?: (prepTimeMinutes: number) => void;
 }
 
 export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({ 
@@ -243,18 +263,158 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
   onDeleteMenu,
   onPreviewMenu,
   onEditItem,
+  onUpdateItem,
+  onShowToast,
   initialActiveTab = 'menus',
   onGoToOrdering,
-  onBackToOrders
+  onBackToOrders,
+  prepTimeMinutes = 30,
+  onUpdatePrepTime
 }) => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isCreateItemModalOpen, setIsCreateItemModalOpen] = useState(false);
   const [deleteModalState, setDeleteModalState] = useState<{
     isOpen: boolean;
     menuName: string;
   }>({ isOpen: false, menuName: '' });
+  const [deleteItemModalState, setDeleteItemModalState] = useState<{
+    isOpen: boolean;
+    itemId: string;
+    itemName: string;
+  }>({ isOpen: false, itemId: '', itemName: '' });
   const [activeTab, setActiveTab] = useState<'menus' | 'item-library' | 'settings'>(initialActiveTab);
   
   const [foodItems, setFoodItems] = useState(FOOD_ITEMS);
+  const [prepTime, setPrepTime] = useState(prepTimeMinutes.toString());
+
+  // Load saved items from localStorage and merge with default items
+  useEffect(() => {
+    import('@/utils/persistence').then(({ getAllItems, getImage }) => {
+      const savedItems = getAllItems();
+      if (Object.keys(savedItems).length > 0) {
+        setFoodItems(prevItems => {
+          // First, update existing items with saved data
+          const updatedExistingItems = prevItems.map(item => {
+            const savedItem = savedItems[item.id];
+            const savedImage = getImage(item.id);
+            if (savedItem) {
+              // Merge saved data, prioritizing saved images
+              return { 
+                ...item, 
+                ...savedItem,
+                image: savedItem.image || savedImage || item.image
+              };
+            } else if (savedImage) {
+              // Only image was saved separately
+              return { ...item, image: savedImage };
+            }
+            return item;
+          });
+          
+          // Then, add any new items that don't exist in the static FOOD_ITEMS
+          const existingItemIds = new Set(prevItems.map(item => item.id));
+          const newItems = Object.values(savedItems).filter(savedItem => 
+            !existingItemIds.has(savedItem.id)
+          ).map(savedItem => ({
+            // Ensure all required properties are present with defaults
+            ...savedItem,
+            menus: savedItem.menus || [],
+            available: savedItem.available !== undefined ? savedItem.available : true,
+            internalName: savedItem.internalName || savedItem.name,
+            description: savedItem.description || '',
+            price: savedItem.price || 0,
+            image: savedItem.image || ''
+          }));
+          
+          // Combine existing updated items with new items
+          return [...updatedExistingItems, ...newItems];
+        });
+      }
+    });
+  }, []);
+
+  // Handle item updates from EditItemPage
+  useEffect(() => {
+    if (onUpdateItem) {
+      // Create a function that updates local state
+      const updateLocalItem = (updatedItem: FoodItem) => {
+        setFoodItems(prevItems => {
+          const existingItemIndex = prevItems.findIndex(item => item.id === updatedItem.id);
+          
+          if (existingItemIndex !== -1) {
+            // Update existing item
+            return prevItems.map(item =>
+              item.id === updatedItem.id ? { ...item, ...updatedItem } : item
+            );
+          } else {
+            // Add new item if it doesn't exist
+            return [...prevItems, updatedItem];
+          }
+        });
+      };
+      // This will be used by AppRouter to update items
+      (window as any).__updateMenuItem = updateLocalItem;
+    }
+  }, [onUpdateItem]);
+
+  // Refs for tab animation
+  const tabContainerRef = useRef<HTMLDivElement>(null);
+  const menusTabRef = useRef<HTMLButtonElement>(null);
+  const itemLibraryTabRef = useRef<HTMLButtonElement>(null);
+  const settingsTabRef = useRef<HTMLButtonElement>(null);
+  const [tabIndicator, setTabIndicator] = useState({ left: 0, width: 0 });
+
+  // Update tab indicator position when active tab changes
+  useEffect(() => {
+    const updateTabIndicator = () => {
+      let activeTabElement: HTMLButtonElement | null = null;
+
+      switch (activeTab) {
+        case 'menus':
+          activeTabElement = menusTabRef.current;
+          break;
+        case 'item-library':
+          activeTabElement = itemLibraryTabRef.current;
+          break;
+        case 'settings':
+          activeTabElement = settingsTabRef.current;
+          break;
+      }
+
+      if (activeTabElement && tabContainerRef.current) {
+        const containerRect = tabContainerRef.current.getBoundingClientRect();
+        const tabRect = activeTabElement.getBoundingClientRect();
+        
+        setTabIndicator({
+          left: tabRect.left - containerRect.left,
+          width: tabRect.width
+        });
+      }
+    };
+
+    // Small delay to ensure DOM is updated
+    const timer = setTimeout(updateTabIndicator, 50);
+    return () => clearTimeout(timer);
+  }, [activeTab]);
+
+  // Initial setup
+  useEffect(() => {
+    const updateTabIndicator = () => {
+      const activeTabElement = menusTabRef.current; // Default to menus tab
+      
+      if (activeTabElement && tabContainerRef.current) {
+        const containerRect = tabContainerRef.current.getBoundingClientRect();
+        const tabRect = activeTabElement.getBoundingClientRect();
+        
+        setTabIndicator({
+          left: tabRect.left - containerRect.left,
+          width: tabRect.width
+        });
+      }
+    };
+
+    updateTabIndicator();
+  }, []);
 
 
   const handleCreateMenu = (menuName: string) => {
@@ -288,12 +448,81 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
   };
 
   const handleItemDelete = (id: string) => {
-    console.log('Delete item:', id);
+    const item = foodItems.find(item => item.id === id);
+    if (item) {
+      setDeleteItemModalState({
+        isOpen: true,
+        itemId: id,
+        itemName: item.internalName || item.name
+      });
+    }
+  };
+
+  const handleDeleteItemConfirm = () => {
+    const { itemId } = deleteItemModalState;
+    
+    // Remove from local state
+    setFoodItems(prevItems => prevItems.filter(item => item.id !== itemId));
+    
+    // Remove from localStorage
+    import('@/utils/persistence').then(({ deleteItem }) => {
+      deleteItem(itemId);
+    });
+    
+    // Show success toast
+    onShowToast?.(`Item deleted successfully`, 'success');
+    
+    // Close modal
+    setDeleteItemModalState({ isOpen: false, itemId: '', itemName: '' });
+  };
+
+  const handleDeleteItemCancel = () => {
+    setDeleteItemModalState({ isOpen: false, itemId: '', itemName: '' });
   };
 
   const handleCreateItem = () => {
-    console.log('Create new item');
+    setIsCreateItemModalOpen(true);
   };
+
+  const handleCreateItemSubmit = (itemName: string) => {
+    // Create new food item with default values
+    const newItem: FoodItem = {
+      id: `item-${Date.now()}`,
+      name: itemName,
+      internalName: itemName,
+      description: '',
+      price: 0,
+      image: '',
+      menus: [],
+      available: true
+    };
+
+    // Add to food items list
+    setFoodItems(prevItems => [...prevItems, newItem]);
+
+    // Save to localStorage
+    import('@/utils/persistence').then(({ saveItem }) => {
+      saveItem(newItem.id, newItem);
+    });
+
+    // Navigate to edit page for the new item
+    onEditItem?.(newItem.id);
+
+    setIsCreateItemModalOpen(false);
+  };
+
+  // Options for prep time setting
+  const prepTimeOptions: CanarySelectOption[] = [
+    { label: '15 minutes', value: '15' },
+    { label: '20 minutes', value: '20' },
+    { label: '25 minutes', value: '25' },
+    { label: '30 minutes', value: '30' },
+    { label: '35 minutes', value: '35' },
+    { label: '40 minutes', value: '40' },
+    { label: '45 minutes', value: '45' },
+    { label: '50 minutes', value: '50' },
+    { label: '60 minutes', value: '60' }
+  ];
 
   // Create sidebar sections with exact typography
   const sidebarSections: SidebarSection[] = [
@@ -451,132 +680,189 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
         </div>
 
         {/* Page Header */}
-        <div className="bg-white border-b border-neutral-200 py-4 px-6 sm:px-4">
-          <h1 className="font-roboto text-subtitle font-medium text-canary-black-1">
-            Food and Beverage Ordering
-          </h1>
-        </div>
+        <AnimatedSection delay={0}>
+          <div className="bg-white border-b border-neutral-200 py-4 px-6 sm:px-4">
+            <h1 className="font-roboto text-subtitle font-medium text-canary-black-1">
+              Food and Beverage Ordering
+            </h1>
+          </div>
+        </AnimatedSection>
 
         {/* Content */}
         <div className="flex-1 bg-white py-8 px-10 sm:px-4 md:px-6 flex flex-col gap-6 overflow-auto">
-          {/* Tabs */}
-          <div className="flex items-start overflow-x-auto min-h-[40px]">
-            <Tab 
-              active={activeTab === 'menus'} 
-              onClick={() => setActiveTab('menus')}
-            >
-              Menus
-            </Tab>
-            <Tab 
-              active={activeTab === 'item-library'} 
-              onClick={() => setActiveTab('item-library')}
-            >
-              Item library
-            </Tab>
-            <Tab 
-              active={activeTab === 'settings'} 
-              onClick={() => setActiveTab('settings')}
-            >
-              Settings
-            </Tab>
-          </div>
-
-          {/* Tab Content */}
-          {activeTab === 'menus' && (
-            <>
-              {/* Menus Header */}
-              <div className="flex items-start justify-between gap-4">
-                <h2 className="font-roboto text-title font-semibold text-canary-black-1 shrink-0">
-                  Menus
-                </h2>
-                <Button onClick={() => setIsCreateModalOpen(true)}>Create menu</Button>
-              </div>
-
-              <div className="flex flex-col gap-1">
-              {/* Headers */}
-              <div className="flex items-start justify-between px-4 pb-0 pr-6 sm:pl-4 font-roboto text-caption-sm font-medium text-canary-black-3 uppercase">
-                <div className="w-48 lg:w-48 md:w-40 sm:w-32 ml-3">Menu name</div>
-                <div className="w-48 lg:w-48 md:w-40 sm:w-32 hidden sm:block">Entry Points</div>
-                <div className="w-32 opacity-0 text-right">Actions</div>
-              </div>
-
-              {/* Menu Items */}
-              <div className="border border-neutral-200 rounded-lg overflow-hidden">
-                {menus.map((item, index) => (
-                  <MenuItem
-                    key={item.name}
-                    name={item.name}
-                    entryPoint={item.entryPoint}
-                    isLast={index === menus.length - 1}
-                    onPreview={() => onPreviewMenu?.(item.name)}
-                    onEdit={() => onEditMenu?.(item.name, item.entryPoint)}
-                    onDelete={() => handleDeleteClick(item.name)}
-                  />
-                ))}
-              </div>
-              </div>
-            </>
-          )}
-
-          {activeTab === 'item-library' && (
-            <>
-              {/* Item Library Header */}
-              <div className="flex items-start justify-between gap-4">
-                <h2 className="font-roboto text-title font-semibold text-canary-black-1 shrink-0">
-                  Item library
-                </h2>
-                <Button onClick={handleCreateItem}>Create new item</Button>
-              </div>
+          {/* Content Container with Max Width and Centering */}
+          <div className="w-full max-w-[1200px] mx-auto">
+            {/* Tabs */}
+            <AnimatedSection delay={80}>
+              <div 
+                ref={tabContainerRef}
+                className="relative flex items-start overflow-x-auto min-h-[40px] mb-6"
+              >
+              <Tab 
+                tabRef={menusTabRef}
+                active={activeTab === 'menus'} 
+                onClick={() => setActiveTab('menus')}
+              >
+                Menus
+              </Tab>
+              <Tab 
+                tabRef={itemLibraryTabRef}
+                active={activeTab === 'item-library'} 
+                onClick={() => setActiveTab('item-library')}
+              >
+                Item library
+              </Tab>
+              <Tab 
+                tabRef={settingsTabRef}
+                active={activeTab === 'settings'} 
+                onClick={() => setActiveTab('settings')}
+              >
+                Settings
+              </Tab>
               
-            
-            <div className="flex flex-col gap-1">
-              {/* Headers */}
-              <div className="flex items-start justify-between px-4 pb-0 pr-6 sm:pl-4 font-roboto text-caption-sm font-medium text-canary-black-3 uppercase">
-                <div className="w-72 lg:w-72 md:w-60 sm:w-48 ml-3">Item</div>
-                <div className="w-56 lg:w-56 md:w-44 sm:w-36">Menus</div>
-                <div className="w-20">Price</div>
-                <div className="w-32 text-right">Availability</div>
+              {/* Sliding indicator */}
+              <div
+                className="absolute bottom-0 h-1 bg-canary-blue-1 transition-all duration-300 ease-out"
+                style={{
+                  left: `${tabIndicator.left}px`,
+                  width: `${tabIndicator.width}px`,
+                  transform: 'translateZ(0)' // Force hardware acceleration
+                }}
+              />
               </div>
+            </AnimatedSection>
 
-              {/* Food Items */}
-              <div className="border border-neutral-200 rounded-lg overflow-hidden">
-                {foodItems.map((item, index) => (
-                  <FoodItem
-                    key={item.id}
-                    id={item.id}
-                    name={item.name}
-                    image={item.image}
-                    menus={item.menus}
-                    price={item.price}
-                    available={item.available}
-                    onToggle={handleItemToggle}
-                    onEdit={handleItemEdit}
-                    onDelete={handleItemDelete}
-                    isLast={index === foodItems.length - 1}
-                  />
-                ))}
-              </div>
-            </div>
-            </>
-          )}
+            {/* Tab Content */}
+            {activeTab === 'menus' && (
+              <AnimatedSection delay={160}>
+                {/* Menus Header */}
+                <div className="flex items-start justify-between gap-4 mb-6">
+                  <h2 className="font-roboto text-title font-semibold text-canary-black-1 shrink-0">
+                    Menus
+                  </h2>
+                  <Button onClick={() => setIsCreateModalOpen(true)}>Create menu</Button>
+                </div>
 
-          {activeTab === 'settings' && (
-            <div className="flex flex-col items-center justify-center py-16">
-              <p className="font-roboto text-body-sm text-canary-black-4">
-                Settings tab content coming soon...
-              </p>
-            </div>
-          )}
+                <div className="flex flex-col gap-1">
+                  {/* Headers */}
+                  <div className="flex items-start justify-between px-4 pb-0 pr-6 sm:pl-4 font-roboto text-caption-sm font-medium text-canary-black-3 uppercase">
+                    <div className="w-48 lg:w-48 md:w-40 sm:w-32 ml-3">Menu name</div>
+                    <div className="w-48 lg:w-48 md:w-40 sm:w-32 hidden sm:block">Entry Points</div>
+                    <div className="w-32 opacity-0 text-right">Actions</div>
+                  </div>
+
+                  {/* Menu Items */}
+                  <div className="border border-neutral-200 rounded-lg overflow-hidden">
+                    {menus.map((item, index) => (
+                      <MenuItem
+                        key={item.name}
+                        name={item.name}
+                        entryPoint={item.entryPoint}
+                        isLast={index === menus.length - 1}
+                        onPreview={() => onPreviewMenu?.(item.name)}
+                        onEdit={() => onEditMenu?.(item.name, item.entryPoint)}
+                        onDelete={() => handleDeleteClick(item.name)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </AnimatedSection>
+            )}
+
+            {activeTab === 'item-library' && (
+              <AnimatedSection delay={160}>
+                {/* Item Library Header */}
+                <div className="flex items-start justify-between gap-4 mb-6">
+                  <h2 className="font-roboto text-title font-semibold text-canary-black-1 shrink-0">
+                    Item library
+                  </h2>
+                  <Button onClick={handleCreateItem}>Create new item</Button>
+                </div>
+                
+                <div className="flex flex-col gap-1">
+                  {/* Headers */}
+                  <div className="flex items-start justify-between px-4 pb-0 pr-6 sm:pl-4 font-roboto text-caption-sm font-medium text-canary-black-3 uppercase">
+                    <div className="w-72 lg:w-72 md:w-60 sm:w-48 ml-3">Item</div>
+                    <div className="w-56 lg:w-56 md:w-44 sm:w-36">Menus</div>
+                    <div className="w-20">Price</div>
+                    <div className="w-32 text-right">Availability</div>
+                  </div>
+
+                  {/* Food Items */}
+                  <div className="border border-neutral-200 rounded-lg overflow-hidden">
+                    {foodItems.map((item, index) => (
+                      <FoodItem
+                        key={item.id}
+                        id={item.id}
+                        name={item.name}
+                        internalName={item.internalName}
+                        image={item.image}
+                        menus={item.menus}
+                        price={item.price}
+                        available={item.available}
+                        onToggle={handleItemToggle}
+                        onEdit={handleItemEdit}
+                        onDelete={handleItemDelete}
+                        isLast={index === foodItems.length - 1}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </AnimatedSection>
+            )}
+
+            {activeTab === 'settings' && (
+              <AnimatedSection delay={160}>
+                {/* Settings Header */}
+                <div className="flex items-start justify-between gap-4 mb-6">
+                  <h2 className="font-roboto text-title font-semibold text-canary-black-1 shrink-0">
+                    Settings
+                  </h2>
+                </div>
+
+                {/* Settings Content */}
+                <div className="flex flex-col gap-6">
+                  {/* Average Order Prep Time Setting */}
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-2">
+                      <h3 className="font-roboto text-body-sm font-medium text-canary-black-1">
+                        Average order prep time
+                      </h3>
+                      <p className="font-roboto text-body-sm text-canary-black-3">
+                        How long an order typically takes to prepare. This is used to calculate estimated arrival times for guests and determine order urgency for staff.
+                      </p>
+                    </div>
+                    
+                    <div className="w-48">
+                      <CanarySelect
+                        options={prepTimeOptions}
+                        value={prepTime}
+                        onChange={(e) => {
+                          const newPrepTime = e.target.value;
+                          setPrepTime(newPrepTime);
+                          onUpdatePrepTime?.(parseInt(newPrepTime));
+                        }}
+                        size={InputSize.NORMAL}
+                        placeholder="Select prep time"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </AnimatedSection>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Sticky Go to Ordering Flow Button */}
-      <button
-        onClick={onGoToOrdering}
-        className="fixed bottom-6 right-6 bg-canary-blue-1 text-white px-6 py-3 rounded-lg font-roboto font-medium text-body-sm shadow-lg hover:opacity-90 transition-opacity z-50"
-      >
-        Go to ordering flow
-      </button>
+      <AnimatedSection delay={240}>
+        <button
+          onClick={onGoToOrdering}
+          className="fixed bottom-6 right-6 bg-canary-blue-1 text-white px-6 py-3 rounded-lg font-roboto font-medium text-body-sm shadow-lg hover:opacity-90 transition-opacity z-50"
+        >
+          Go to ordering flow
+        </button>
+      </AnimatedSection>
 
       {/* Create Menu Modal */}
       <CreateMenuModal
@@ -591,6 +877,21 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
         onClose={handleDeleteCancel}
         onDeleteMenu={handleDeleteConfirm}
         menuName={deleteModalState.menuName}
+      />
+
+      {/* Create Item Modal */}
+      <CreateItemModal
+        isOpen={isCreateItemModalOpen}
+        onClose={() => setIsCreateItemModalOpen(false)}
+        onCreateItem={handleCreateItemSubmit}
+      />
+
+      {/* Delete Item Modal */}
+      <DeleteItemModal
+        isOpen={deleteItemModalState.isOpen}
+        onClose={handleDeleteItemCancel}
+        onDeleteItem={handleDeleteItemConfirm}
+        itemName={deleteItemModalState.itemName}
       />
     </div>
   );

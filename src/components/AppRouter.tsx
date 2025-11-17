@@ -12,11 +12,37 @@ import { OrderConfirmation } from './OrderConfirmation';
 import { EditSectionPage } from './EditSectionPage';
 import { MenuAvailabilityPage } from './MenuAvailabilityPage';
 import { OrderManagementPage } from './OrderManagementPage';
+import { EmailPreview } from './EmailPreview';
+import { DenialEmailPreview } from './DenialEmailPreview';
 import { Toast } from './Toast';
 import { FOOD_ITEMS, convertToSectionItem, getFoodItemsByMenu, type FoodItem as CentralizedFoodItem } from '@/data/foodItems';
-import { loadData, saveMenuData, saveMenuAvailability as persistMenuAvailability } from '@/utils/persistence';
+import { loadData, saveMenuData, saveMenuAvailability as persistMenuAvailability, savePrepTime } from '@/utils/persistence';
 
-type Page = 'order-management' | 'menu-management' | 'edit-menu' | 'edit-item' | 'edit-section' | 'menu-availability' | 'mobile-preview' | 'mobile-menu-ordering' | 'menu-preview' | 'order-summary' | 'order-loading' | 'order-confirmation';
+// OrderDetails interface for email preview
+interface OrderDetails {
+  id: string;
+  orderNumber: string;
+  guestName: string;
+  guestEmail: string;
+  roomNumber: string;
+  orderDate: string;
+  orderTime: string;
+  timeElapsed: string;
+  items: {
+    id: string;
+    name: string;
+    image: string;
+    price: number;
+    quantity: number;
+    specialRequests?: string;
+  }[];
+  subtotal: number;
+  totalItems: number;
+  transactionId: string;
+  status: string;
+}
+
+type Page = 'order-management' | 'menu-management' | 'edit-menu' | 'edit-item' | 'edit-section' | 'menu-availability' | 'mobile-preview' | 'mobile-menu-ordering' | 'menu-preview' | 'order-summary' | 'order-loading' | 'order-confirmation' | 'email-preview' | 'denial-email-preview';
 
 interface MenuItem {
   name: string; // This will be the external_name for backward compatibility
@@ -66,10 +92,23 @@ interface AppState {
   cart: Record<string, { item: SectionItem; quantity: number; specialRequests: string }>;
   activeManagementTab: 'menus' | 'item-library' | 'settings';
   isPreviewMode: boolean;
+  selectedOrderForEmail?: OrderDetails;
+  selectedOrderForDenialEmail?: {
+    order: OrderDetails;
+    denialReason: string;
+    denialComment?: string;
+  };
+  prepTimeMinutes: number;
   toast: {
     isVisible: boolean;
     message: string;
     type: 'success' | 'error' | 'warning';
+  };
+  pageTransition: {
+    isTransitioning: boolean;
+    fromPage?: Page;
+    toPage?: Page;
+    phase: 'blur' | 'fade-in' | 'none';
   };
 }
 
@@ -168,10 +207,15 @@ export const AppRouter: React.FC = () => {
     cart: {},
     activeManagementTab: 'menus',
     isPreviewMode: false,
+    prepTimeMinutes: savedData.prepTimeMinutes || 30,
     toast: {
       isVisible: false,
       message: '',
       type: 'success'
+    },
+    pageTransition: {
+      isTransitioning: false,
+      phase: 'none'
     }
   });
 
@@ -179,6 +223,46 @@ export const AppRouter: React.FC = () => {
   useEffect(() => {
     saveMenuData(appState.menus);
   }, [appState.menus]);
+
+  // Smooth page transition function
+  const transitionToPage = (targetPage: Page, stateUpdates: Partial<AppState> = {}) => {
+    // Phase 1: Start blur transition (400ms, fade to 55%)
+    setAppState(prev => ({
+      ...prev,
+      pageTransition: {
+        isTransitioning: true,
+        fromPage: prev.currentPage,
+        toPage: targetPage,
+        phase: 'blur'
+      }
+    }));
+
+    // Phase 2: Switch page and start fade-in (starts at 350ms, 50ms overlap)
+    setTimeout(() => {
+      setAppState(prev => ({
+        ...prev,
+        ...stateUpdates,
+        currentPage: targetPage,
+        pageTransition: {
+          isTransitioning: true,
+          fromPage: prev.pageTransition.fromPage,
+          toPage: targetPage,
+          phase: 'fade-in'
+        }
+      }));
+    }, 350);
+
+    // End transition (after fade-in completes)
+    setTimeout(() => {
+      setAppState(prev => ({
+        ...prev,
+        pageTransition: {
+          isTransitioning: false,
+          phase: 'none'
+        }
+      }));
+    }, 750);
+  };
 
   const navigateToEditMenu = (menuName: string, entryPoint: string) => {
     const menu = appState.menus.find(m => m.name === menuName);
@@ -197,27 +281,35 @@ export const AppRouter: React.FC = () => {
     }));
   };
 
+  const navigateToEmailPreview = (order: OrderDetails, prepTimeMinutes?: number) => {
+    transitionToPage('email-preview', {
+      selectedOrderForEmail: order
+    });
+  };
+
+  const navigateToDenialEmailPreview = (order: OrderDetails, denialReason: string, denialComment?: string) => {
+    transitionToPage('denial-email-preview', {
+      selectedOrderForDenialEmail: {
+        order,
+        denialReason,
+        denialComment
+      }
+    });
+  };
+
   const navigateToMenuManagement = () => {
-    setAppState(prev => ({
-      ...prev,
-      currentPage: 'menu-management'
-    }));
+    transitionToPage('menu-management');
   };
 
   const navigateToMenuManagementWithTab = (tab: 'menus' | 'item-library' | 'settings') => {
-    setAppState(prev => ({
-      ...prev,
-      currentPage: 'menu-management',
+    transitionToPage('menu-management', {
       activeManagementTab: tab
-    }));
+    });
   };
 
 
   const navigateToMobileMenuOrdering = () => {
-    setAppState(prev => ({
-      ...prev,
-      currentPage: 'mobile-preview'
-    }));
+    transitionToPage('mobile-preview');
   };
 
   const navigateToMenuPreview = (menuName: string) => {
@@ -368,8 +460,26 @@ export const AppRouter: React.FC = () => {
 
 
   const navigateToEditItem = (itemId: string) => {
-    // Use centralized food items data
-    const item = FOOD_ITEMS.find(i => i.id === itemId) || FOOD_ITEMS[0];
+    // First check centralized food items data
+    let item = FOOD_ITEMS.find(i => i.id === itemId);
+    
+    // If not found in static data, check localStorage for saved items
+    if (!item) {
+      import('@/utils/persistence').then(({ getItem }) => {
+        const savedItem = getItem(itemId);
+        if (savedItem) {
+          setAppState(prev => ({
+            ...prev,
+            currentPage: 'edit-item',
+            editingItem: savedItem,
+            activeManagementTab: 'item-library'
+          }));
+        } else {
+          console.error(`Item with ID ${itemId} not found`);
+        }
+      });
+      return;
+    }
     
     setAppState(prev => ({
       ...prev,
@@ -380,54 +490,12 @@ export const AppRouter: React.FC = () => {
   };
 
   const saveItem = (item: FoodItem) => {
-    setAppState(prev => {
-      // Find the menu and section containing this item
-      const updatedMenus = prev.menus.map(menu => {
-        if (menu.name === prev.editingMenu?.name) {
-          const updatedSections = menu.sections?.map(section => {
-            if (section.id === prev.editingSection?.id) {
-              // Update or add the item to this section
-              const existingItemIndex = section.items.findIndex(existingItem => existingItem.id === item.id);
-              const updatedItems = [...section.items];
-              
-              if (existingItemIndex >= 0) {
-                // Update existing item
-                updatedItems[existingItemIndex] = {
-                  id: item.id,
-                  name: item.name,
-                  image: item.image || ''
-                };
-              } else {
-                // Add new item
-                updatedItems.push({
-                  id: item.id,
-                  name: item.name,
-                  image: item.image || ''
-                });
-              }
-              
-              return {
-                ...section,
-                items: updatedItems
-              };
-            }
-            return section;
-          }) || [];
-          
-          return {
-            ...menu,
-            sections: updatedSections
-          };
-        }
-        return menu;
-      });
-
-      return {
-        ...prev,
-        menus: updatedMenus
-      };
-    });
+    // Update the MenuManagementPage state if the update function is available
+    if ((window as any).__updateMenuItem) {
+      (window as any).__updateMenuItem(item);
+    }
     
+    // Items are persisted to localStorage in the EditItemPage itself
     showToast('Item saved successfully', 'success');
   };
 
@@ -455,6 +523,20 @@ export const AppRouter: React.FC = () => {
         editingSection: newSection
       }));
     }
+  };
+
+  const navigateToCreateSection = (sectionName: string) => {
+    const sectionId = sectionName.toLowerCase().replace(/\s+/g, '-');
+    const newSection: MenuSection = {
+      id: sectionId,
+      title: sectionName,
+      items: []
+    };
+    setAppState(prev => ({
+      ...prev,
+      currentPage: 'edit-section',
+      editingSection: newSection
+    }));
   };
 
   const navigateBackToEditMenu = () => {
@@ -624,12 +706,94 @@ export const AppRouter: React.FC = () => {
     }));
   };
 
+  const updatePrepTime = (prepTimeMinutes: number) => {
+    setAppState(prev => ({
+      ...prev,
+      prepTimeMinutes
+    }));
+    savePrepTime(prepTimeMinutes);
+  };
+
+  // Create page wrapper with transition effects
+  const renderPage = (pageContent: React.ReactNode) => {
+    const { phase, isTransitioning } = appState.pageTransition;
+    
+    // Phase-specific styling
+    const getTransitionStyles = () => {
+      switch (phase) {
+        case 'blur':
+          // Phase 1: Blur out and fade to 55% (400ms)
+          return {
+            filter: 'blur(3px)',
+            opacity: 0.55,
+            transform: 'scale(0.98)',
+            transition: 'all 400ms ease-out'
+          };
+        case 'fade-in':
+          // Phase 2: New page fades from 55% to 100% (400ms)
+          return {
+            filter: 'blur(0px)',
+            opacity: 1,
+            transform: 'scale(1)',
+            transition: 'all 400ms ease-out'
+          };
+        default:
+          // No transition
+          return {
+            filter: 'blur(0px)',
+            opacity: 1,
+            transform: 'scale(1)',
+            transition: 'none'
+          };
+      }
+    };
+    
+    return (
+      <div style={getTransitionStyles()}>
+        {pageContent}
+        <Toast
+          message={appState.toast.message}
+          type={appState.toast.type}
+          isVisible={appState.toast.isVisible}
+          onClose={hideToast}
+        />
+      </div>
+    );
+  };
+
   switch (appState.currentPage) {
     case 'order-management':
+      return renderPage(
+        <OrderManagementPage 
+          onManageMenus={navigateToMenuManagement}
+          onViewEmail={navigateToEmailPreview}
+          onViewDenialEmail={navigateToDenialEmailPreview}
+          prepTimeMinutes={appState.prepTimeMinutes}
+        />
+      );
+    case 'email-preview':
+      return renderPage(
+        <EmailPreview
+          order={appState.selectedOrderForEmail!}
+          onClose={() => transitionToPage('order-management')}
+          prepTimeMinutes={appState.prepTimeMinutes}
+        />
+      );
+    case 'denial-email-preview':
+      // Add safety check for selectedOrderForDenialEmail
+      if (!appState.selectedOrderForDenialEmail?.order) {
+        // If no order is selected, redirect back to order management
+        setTimeout(() => transitionToPage('order-management'), 0);
+        return renderPage(<div>Loading...</div>);
+      }
+      
       return (
         <>
-          <OrderManagementPage 
-            onManageMenus={navigateToMenuManagement}
+          <DenialEmailPreview
+            order={appState.selectedOrderForDenialEmail.order}
+            denialReason={appState.selectedOrderForDenialEmail.denialReason}
+            denialComment={appState.selectedOrderForDenialEmail.denialComment}
+            onClose={() => transitionToPage('order-management')}
           />
           <Toast
             message={appState.toast.message}
@@ -640,20 +804,12 @@ export const AppRouter: React.FC = () => {
         </>
       );
     case 'menu-availability':
-      return (
-        <>
-          <MenuAvailabilityPage
-            menuName={appState.editingMenu?.name}
-            onBack={navigateBackToEditMenu}
-            onSave={saveMenuAvailability}
-          />
-          <Toast
-            message={appState.toast.message}
-            type={appState.toast.type}
-            isVisible={appState.toast.isVisible}
-            onClose={hideToast}
-          />
-        </>
+      return renderPage(
+        <MenuAvailabilityPage
+          menuName={appState.editingMenu?.name}
+          onBack={navigateBackToEditMenu}
+          onSave={saveMenuAvailability}
+        />
       );
     case 'edit-section':
       return (
@@ -662,6 +818,10 @@ export const AppRouter: React.FC = () => {
             section={appState.editingSection}
             onBack={navigateBackToEditMenu}
             onSave={saveSection}
+            parentMenu={appState.editingMenu ? {
+              name: appState.editingMenu.name,
+              sections: appState.editingMenu.sections || []
+            } : undefined}
           />
           <Toast
             message={appState.toast.message}
@@ -767,6 +927,7 @@ export const AppRouter: React.FC = () => {
           <OrderConfirmation
             cartEntries={Object.values(appState.cart)}
             onClose={closeOrderFlow}
+            onGoToOrderManagement={navigateToOrderManagement}
           />
           <Toast
             message={appState.toast.message}
@@ -777,19 +938,11 @@ export const AppRouter: React.FC = () => {
         </>
       );
     case 'mobile-preview':
-      return (
-        <>
-          <MobileGuestExperience
-            onBack={navigateToMenuManagement}
-            onOrderClick={() => setAppState(prev => ({ ...prev, currentPage: 'mobile-menu-ordering' }))}
-          />
-          <Toast
-            message={appState.toast.message}
-            type={appState.toast.type}
-            isVisible={appState.toast.isVisible}
-            onClose={hideToast}
-          />
-        </>
+      return renderPage(
+        <MobileGuestExperience
+          onBack={navigateToMenuManagement}
+          onOrderClick={() => setAppState(prev => ({ ...prev, currentPage: 'mobile-menu-ordering' }))}
+        />
       );
     case 'edit-menu':
       return (
@@ -803,6 +956,7 @@ export const AppRouter: React.FC = () => {
             onBack={() => navigateToMenuManagementWithTab('menus')}
             onSave={saveMenu}
             onEditSection={navigateToEditSection}
+            onCreateSection={navigateToCreateSection}
             onAddAvailabilityHours={navigateToMenuAvailability}
           />
           <Toast
@@ -815,26 +969,22 @@ export const AppRouter: React.FC = () => {
       );
     case 'menu-management':
     default:
-      return (
-        <>
-          <MenuManagementPage
-            menus={appState.menus}
-            onEditMenu={navigateToEditMenu}
-            onCreateMenu={createNewMenu}
-            onDeleteMenu={deleteMenu}
-            onPreviewMenu={navigateToMenuPreview}
-            onEditItem={navigateToEditItem}
-            initialActiveTab={appState.activeManagementTab}
-            onGoToOrdering={navigateToMobileMenuOrdering}
-            onBackToOrders={navigateToOrderManagement}
-          />
-          <Toast
-            message={appState.toast.message}
-            type={appState.toast.type}
-            isVisible={appState.toast.isVisible}
-            onClose={hideToast}
-          />
-        </>
+      return renderPage(
+        <MenuManagementPage
+          menus={appState.menus}
+          onEditMenu={navigateToEditMenu}
+          onCreateMenu={createNewMenu}
+          onDeleteMenu={deleteMenu}
+          onPreviewMenu={navigateToMenuPreview}
+          onEditItem={navigateToEditItem}
+          onUpdateItem={saveItem}
+          onShowToast={showToast}
+          initialActiveTab={appState.activeManagementTab}
+          onGoToOrdering={navigateToMobileMenuOrdering}
+          onBackToOrders={navigateToOrderManagement}
+          prepTimeMinutes={appState.prepTimeMinutes}
+          onUpdatePrepTime={updatePrepTime}
+        />
       );
   }
 };

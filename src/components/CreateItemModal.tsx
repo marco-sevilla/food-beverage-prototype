@@ -5,36 +5,36 @@ import Icon from '@mdi/react';
 import { mdiClose } from '@mdi/js';
 import { AnimatedModal } from './AnimatedModal';
 
-interface CreateMenuModalProps {
+interface CreateItemModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreateMenu: (menuName: string) => void;
+  onCreateItem: (itemName: string) => void;
 }
 
-export const CreateMenuModal: React.FC<CreateMenuModalProps> = ({
+export const CreateItemModal: React.FC<CreateItemModalProps> = ({
   isOpen,
   onClose,
-  onCreateMenu,
+  onCreateItem,
 }) => {
-  const [menuName, setMenuName] = useState('');
+  const [itemName, setItemName] = useState('');
   const [error, setError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!menuName.trim()) {
-      setError('Menu name is required');
+    if (!itemName.trim()) {
+      setError('Item name is required');
       return;
     }
 
-    onCreateMenu(menuName.trim());
-    setMenuName('');
+    onCreateItem(itemName.trim());
+    setItemName('');
     setError('');
     onClose();
   };
 
   const handleClose = () => {
-    setMenuName('');
+    setItemName('');
     setError('');
     onClose();
   };
@@ -44,7 +44,7 @@ export const CreateMenuModal: React.FC<CreateMenuModalProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
         <h2 className="font-roboto text-subtitle font-semibold text-canary-black-1">
-          Create new menu
+          Create new item
         </h2>
         <button
           onClick={handleClose}
@@ -58,16 +58,16 @@ export const CreateMenuModal: React.FC<CreateMenuModalProps> = ({
       <form onSubmit={handleSubmit} className="px-6 py-4">
         <div className="mb-4">
           <label className="block font-roboto text-body-sm font-medium text-canary-black-1 mb-2">
-            Menu name
+            Item name
           </label>
           <input
             type="text"
-            value={menuName}
+            value={itemName}
             onChange={(e) => {
-              setMenuName(e.target.value);
+              setItemName(e.target.value);
               if (error) setError('');
             }}
-            placeholder="Breakfast menu, Lunch menu, Happy hour"
+            placeholder="Margherita Pizza, Caesar Salad, Chocolate Cake"
             className={`w-full h-12 px-4 border rounded font-roboto text-body-sm text-canary-black-1 focus:outline-none focus:ring-2 focus:ring-canary-blue-1 ${
               error ? 'border-red-400' : 'border-neutral-200'
             }`}
@@ -79,7 +79,7 @@ export const CreateMenuModal: React.FC<CreateMenuModalProps> = ({
             </p>
           )}
           <p className="mt-2 font-roboto text-caption text-canary-black-4">
-            This name will be used for both guest-facing and internal staff views. You can set a separate internal name once you create the menu.
+            This name will be used for both guest-facing and internal staff views. You can set a separate internal name once you create the item.
           </p>
         </div>
 
@@ -96,7 +96,7 @@ export const CreateMenuModal: React.FC<CreateMenuModalProps> = ({
             type="submit"
             className="flex items-center justify-center gap-2 h-10 px-4 bg-canary-blue-1 text-white border-none rounded font-roboto text-body-sm font-medium cursor-pointer hover:opacity-90"
           >
-            Create menu
+            Create item
           </button>
         </div>
       </form>

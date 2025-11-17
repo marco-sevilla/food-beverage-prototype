@@ -5,21 +5,21 @@ import Icon from '@mdi/react';
 import { mdiClose } from '@mdi/js';
 import { AnimatedModal } from './AnimatedModal';
 
-interface DeleteMenuModalProps {
+interface DeleteItemModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onDeleteMenu: () => void;
-  menuName: string;
+  onDeleteItem: () => void;
+  itemName: string;
 }
 
-export const DeleteMenuModal: React.FC<DeleteMenuModalProps> = ({
+export const DeleteItemModal: React.FC<DeleteItemModalProps> = ({
   isOpen,
   onClose,
-  onDeleteMenu,
-  menuName,
+  onDeleteItem,
+  itemName,
 }) => {
   const handleDelete = () => {
-    onDeleteMenu();
+    onDeleteItem();
     onClose();
   };
 
@@ -28,7 +28,7 @@ export const DeleteMenuModal: React.FC<DeleteMenuModalProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
         <h2 className="font-roboto text-subtitle font-semibold text-canary-black-1">
-          Delete menu
+          Delete item
         </h2>
         <button
           onClick={onClose}
@@ -40,24 +40,25 @@ export const DeleteMenuModal: React.FC<DeleteMenuModalProps> = ({
 
       {/* Content */}
       <div className="px-6 py-4">
-        <p className="font-roboto text-body-sm text-canary-black-1">
-          Are you sure you want to delete {menuName}? This action cannot be undone.
+        <p className="font-roboto text-body-sm font-normal text-canary-black-1 leading-[22px]">
+          Are you sure you want to delete {itemName}? This action cannot be undone.
         </p>
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-end gap-3 px-6 py-4">
+      <div className="flex items-center justify-end gap-2 px-6 py-4 pt-4">
         <button
           onClick={onClose}
-          className="flex items-center justify-center gap-2 h-10 px-4 bg-transparent text-canary-black-1 border border-neutral-200 rounded font-roboto text-body-sm font-medium cursor-pointer hover:bg-gray-50"
+          className="flex items-center justify-center h-10 px-4 border border-canary-blue-1 text-canary-blue-1 rounded font-roboto text-body-sm font-medium cursor-pointer hover:bg-gray-50"
         >
           Cancel
         </button>
         <button
           onClick={handleDelete}
-          className="flex items-center justify-center gap-2 h-10 px-4 bg-canary-red-1 text-white border-none rounded font-roboto text-body-sm font-medium cursor-pointer hover:opacity-90"
+          className="flex items-center justify-center h-10 px-4 bg-red-600 text-white border-none rounded font-roboto text-body-sm font-medium cursor-pointer hover:opacity-90"
+          style={{ backgroundColor: '#E40046' }}
         >
-          Delete menu
+          Delete item
         </button>
       </div>
     </AnimatedModal>

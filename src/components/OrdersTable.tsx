@@ -1,10 +1,11 @@
 import React from 'react';
 import Icon from '@mdi/react';
-import { 
-  mdiEye,
-  mdiPencil,
-  mdiDelete
-} from '@mdi/js';
+import { mdiDotsHorizontal, mdiCheck, mdiClose } from '@mdi/js';
+import CanaryButton from './temp-components/CanaryButton';
+import { ButtonType, ButtonSize, ButtonColor } from './temp-components/button-types';
+import { colors } from './temp-components/design-tokens';
+import CanaryTag, { TagColor, TagVariant, TagSize } from './temp-components/CanaryTag';
+import CanaryDropdown from './temp-components/CanaryDropdown';
 
 // Types for orders
 interface Order {
@@ -22,139 +23,239 @@ interface Order {
 
 interface OrdersTableProps {
   orders: Order[];
+  orderStatus: 'pending' | 'preparing' | 'delivered' | 'cancelled';
+  selectedOrderId?: string;
+  prepTimeMinutes?: number;
   onRowClick?: (order: Order) => void;
-  onViewOrder?: (order: Order) => void;
-  onEditOrder?: (order: Order) => void;
-  onDeleteOrder?: (order: Order) => void;
+  onViewDetails?: (order: Order) => void;
+  onApprove?: (order: Order) => void;
+  onDeny?: (order: Order) => void;
+  onMarkDelivered?: (order: Order) => void;
 }
 
 export const OrdersTable: React.FC<OrdersTableProps> = ({ 
   orders, 
+  orderStatus,
+  selectedOrderId,
+  prepTimeMinutes = 30,
   onRowClick, 
-  onViewOrder, 
-  onEditOrder, 
-  onDeleteOrder 
+  onViewDetails, 
+  onApprove, 
+  onDeny,
+  onMarkDelivered 
 }) => {
-  // Calculate time elapsed from order time
-  const getTimeElapsed = (orderTime: string) => {
-    // This is a simple mock - in real app, calculate from actual timestamp
-    const mockElapsed = ['5 min', '12 min', '8 min', '15 min', '3 min'];
-    return mockElapsed[Math.floor(Math.random() * mockElapsed.length)];
+  // Get time elapsed from order time - simulating based on order id
+  const getTimeElapsed = (orderId: string) => {
+    const timeMap: Record<string, number> = {
+      '1': 45,
+      '2': 45, 
+      '3': 24,
+      '4': 18,
+      '5': 13,
+      '6': 7,
+      '7': 5,
+      '8': 1
+    };
+    return timeMap[orderId] || 5;
   };
 
-  // Get formatted order date
-  const getOrderDate = (orderTime: string) => {
-    // Mock date - in real app, use actual order date
-    return 'Today';
+  // Calculate time threshold based on prep time setting
+  const getTimeThreshold = (timeElapsed: number): TagColor => {
+    const healthyThreshold = prepTimeMinutes * 0.5; // 0-50% = Green (Healthy)
+    const warningThreshold = prepTimeMinutes * 0.8; // 50-80% = Yellow (Needs attention)
+    // 80%+ = Red (Critical)
+    
+    if (timeElapsed <= healthyThreshold) {
+      return TagColor.SUCCESS; // Green
+    } else if (timeElapsed <= warningThreshold) {
+      return TagColor.WARNING; // Yellow
+    } else {
+      return TagColor.ERROR; // Red
+    }
   };
 
   // Get entry point
   const getEntryPoint = () => {
-    // Mock data - in real app, this would come from order data
     return 'In-room dining';
   };
 
   if (orders.length === 0) {
     return (
-      <div className="bg-white rounded-lg border border-neutral-200 p-8 text-center">
-        <p className="text-gray-500 text-sm">No orders found</p>
+      <div className="bg-white p-8 text-center">
+        <p style={{ color: colors.colorBlack4 }} className="text-sm">No orders found</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
-      {/* Table Header */}
-      <div className="bg-white border-b border-neutral-200 px-6 py-3">
-        <div className="grid grid-cols-12 gap-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-          <div className="col-span-1">Room</div>
-          <div className="col-span-2">Guest Name</div>
-          <div className="col-span-2">Entry Point</div>
-          <div className="col-span-2">Order Date</div>
-          <div className="col-span-2">Time Elapsed</div>
-          <div className="col-span-3 text-right">Actions</div>
-        </div>
-      </div>
+    <div className="bg-white border rounded-lg overflow-hidden" style={{ borderColor: colors.colorBlack6 }}>
+      {/* Table */}
+      <table className="w-full">
+        {/* Table Header */}
+        <thead>
+          <tr className="border-b" style={{ borderBottomColor: colors.colorBlack6 }}>
+            <th className="text-left py-3 px-6 font-roboto text-[12px] font-medium tracking-wider uppercase w-40" 
+                style={{ color: colors.colorBlack4 }}>
+              {orderStatus === 'delivered' ? 'DELIVERY TIME' : 'TIME ELAPSED'}
+              <span className="ml-1 text-xs">↕</span>
+            </th>
+            <th className="text-left py-3 px-6 font-roboto text-[12px] font-medium tracking-wider uppercase w-40" 
+                style={{ color: colors.colorBlack4 }}>
+              ROOM #
+              <span className="ml-1 text-xs">↕</span>
+            </th>
+            <th className="text-left py-3 px-6 font-roboto text-[12px] font-medium tracking-wider uppercase w-52" 
+                style={{ color: colors.colorBlack4 }}>
+              GUEST NAME
+              <span className="ml-1 text-xs">↕</span>
+            </th>
+            <th className="text-left py-3 px-6 font-roboto text-[12px] font-medium tracking-wider uppercase w-48" 
+                style={{ color: colors.colorBlack4 }}>
+              ENTRY POINT
+              <span className="ml-1 text-xs">↕</span>
+            </th>
+            <th className="text-left py-3 px-6 font-roboto text-[12px] font-medium tracking-wider uppercase w-44" 
+                style={{ color: colors.colorBlack4 }}>
+              ORDER DATE
+              <span className="ml-1 text-xs">↕</span>
+            </th>
+            <th className="py-3 px-6 w-auto"></th>
+          </tr>
+        </thead>
 
-      {/* Table Body */}
-      <div className="divide-y divide-neutral-200">
-        {orders.map((order, index) => {
-          return (
-            <div
+        {/* Table Body */}
+        <tbody>
+          {orders.map((order, index) => {
+            const isSelected = selectedOrderId === order.id;
+            return (
+            <tr 
               key={order.id}
-              className="px-6 py-4 hover:bg-gray-50 transition-colors"
+              className="hover:bg-gray-50 transition-colors border-b last:border-b-0"
+              style={{ 
+                borderBottomColor: colors.colorBlack6,
+                backgroundColor: isSelected ? colors.colorBlueCanary5 : 'transparent'
+              }}
             >
-              <div className="grid grid-cols-12 gap-4 items-center">
-                {/* Room Number */}
-                <div className="col-span-1">
-                  <span className="text-sm text-gray-900">
-                    {order.roomNumber}
-                  </span>
-                </div>
+              {/* Time Elapsed / Delivery Time */}
+              <td className="py-4 px-6 w-40">
+                {(() => {
+                  const timeElapsedMinutes = getTimeElapsed(order.id);
+                  const tagColor = getTimeThreshold(timeElapsedMinutes);
+                  return (
+                    <CanaryTag 
+                      label={`${timeElapsedMinutes} MIN`}
+                      color={tagColor}
+                      variant={TagVariant.OUTLINE}
+                      size={TagSize.COMPACT}
+                      uppercase={true}
+                    />
+                  );
+                })()}
+              </td>
 
-                {/* Guest Name */}
-                <div className="col-span-2">
-                  <span className="text-sm font-medium text-gray-900">
-                    {order.guestName}
-                  </span>
-                </div>
+              {/* Room Number */}
+              <td className="py-4 px-6 w-40">
+                <span className="font-roboto text-[14px] font-normal" style={{ color: colors.colorBlack1 }}>
+                  {order.roomNumber}
+                </span>
+              </td>
 
-                {/* Entry Point */}
-                <div className="col-span-2">
-                  <span className="text-sm text-gray-900">
-                    {getEntryPoint()}
-                  </span>
-                </div>
+              {/* Guest Name */}
+              <td className="py-4 px-6 w-52">
+                <span className="font-roboto text-[14px] font-normal" style={{ color: colors.colorBlack1 }}>
+                  {order.guestName}
+                </span>
+              </td>
 
-                {/* Order Date */}
-                <div className="col-span-2">
-                  <span className="text-sm text-gray-900">
-                    {getOrderDate(order.orderTime)}
-                  </span>
-                </div>
+              {/* Entry Point */}
+              <td className="py-4 px-6 w-48">
+                <span className="font-roboto text-[14px] font-normal" style={{ color: colors.colorBlack1 }}>
+                  {getEntryPoint()}
+                </span>
+              </td>
 
-                {/* Time Elapsed */}
-                <div className="col-span-2">
-                  <span className="text-sm text-gray-900">
-                    {getTimeElapsed(order.orderTime)}
-                  </span>
-                </div>
+              {/* Order Date */}
+              <td className="py-4 px-6 w-44">
+                <span className="font-roboto text-[14px] font-normal" style={{ color: colors.colorBlack1 }}>
+                  {order.orderTime}
+                </span>
+              </td>
 
-                {/* Action Buttons */}
-                <div className="col-span-3 flex items-center justify-end gap-2">
-                  <button
+              {/* Action Buttons */}
+              <td className="py-4 px-6 w-auto">
+                <div className="flex items-center justify-end gap-2">
+                  <CanaryButton
                     onClick={(e) => {
                       e.stopPropagation();
-                      onViewOrder?.(order);
+                      onViewDetails?.(order);
                     }}
-                    className="flex items-center justify-center w-8 h-8 rounded hover:bg-gray-100 transition-colors"
+                    type={ButtonType.SHADED}
+                    size={ButtonSize.COMPACT}
+                    color={ButtonColor.NORMAL}
                   >
-                    <Icon path={mdiEye} size="16px" color="#6B7280" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEditOrder?.(order);
-                    }}
-                    className="flex items-center justify-center w-8 h-8 rounded hover:bg-gray-100 transition-colors"
-                  >
-                    <Icon path={mdiPencil} size="16px" color="#6B7280" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteOrder?.(order);
-                    }}
-                    className="flex items-center justify-center w-8 h-8 rounded hover:bg-gray-100 transition-colors"
-                  >
-                    <Icon path={mdiDelete} size="16px" color="#DC2626" />
-                  </button>
+                    View details
+                  </CanaryButton>
+                  
+                  {/* Mark as delivered button for in progress orders */}
+                  {orderStatus === 'preparing' && (
+                    <CanaryButton
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onMarkDelivered?.(order);
+                      }}
+                      type={ButtonType.SHADED}
+                      size={ButtonSize.COMPACT}
+                      color={ButtonColor.NORMAL}
+                    >
+                      Mark as delivered
+                    </CanaryButton>
+                  )}
+                  
+                  {/* Three-dot dropdown for new orders (approve/deny) and in progress orders */}
+                  {(orderStatus === 'pending' || orderStatus === 'preparing') && (
+                    <CanaryDropdown
+                      trigger={
+                        <CanaryButton
+                          type={ButtonType.ICON_SECONDARY}
+                          size={ButtonSize.COMPACT}
+                          color={ButtonColor.NORMAL}
+                          icon={<Icon path={mdiDotsHorizontal} size="16px" />}
+                        />
+                      }
+                      items={orderStatus === 'pending' ? [
+                        {
+                          id: 'approve',
+                          label: 'Approve',
+                          icon: <Icon path={mdiCheck} size="16px" color={colors.success} />,
+                          onClick: () => onApprove?.(order),
+                          variant: 'success'
+                        },
+                        {
+                          id: 'deny',
+                          label: 'Deny',
+                          icon: <Icon path={mdiClose} size="16px" color={colors.danger} />,
+                          onClick: () => onDeny?.(order),
+                          variant: 'danger'
+                        }
+                      ] : [
+                        {
+                          id: 'cancel',
+                          label: 'Cancel Order',
+                          icon: <Icon path={mdiClose} size="16px" color={colors.danger} />,
+                          onClick: () => onDeny?.(order),
+                          variant: 'danger'
+                        }
+                      ]}
+                      align="right"
+                    />
+                  )}
                 </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+              </td>
+            </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 };

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Icon from '@mdi/react';
 import { mdiClose, mdiCheck } from '@mdi/js';
 import { formatMenuDisplay, type FoodItem } from '@/data/foodItems';
+import { AnimatedModal } from './AnimatedModal';
 
 
 // Button component
@@ -88,11 +89,17 @@ const ItemRow: React.FC<ItemRowProps> = ({
   } ${isDisabled ? 'opacity-50' : ''}`}>
     {/* Item Column */}
     <div className="flex items-center gap-4 w-36">
-      <img 
-        src={item.image} 
-        alt={item.name}
-        className="w-8 h-8 rounded object-cover"
-      />
+      {item.image ? (
+        <img 
+          src={item.image} 
+          alt={item.name}
+          className="w-8 h-8 rounded object-cover"
+        />
+      ) : (
+        <div className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center">
+          <span className="text-gray-400 text-xs">?</span>
+        </div>
+      )}
       <span className="font-roboto text-body-sm font-medium text-canary-black-1 truncate">
         {item.name}
       </span>
@@ -139,8 +146,6 @@ export const AddItemsModal: React.FC<AddItemsModalProps> = ({
 }) => {
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
 
-  if (!isOpen) return null;
-
   const handleSelectionChange = (itemId: string, selected: boolean) => {
     const newSelection = new Set(selectedItemIds);
     if (selected) {
@@ -169,70 +174,73 @@ export const AddItemsModal: React.FC<AddItemsModalProps> = ({
     : `Add ${selectedCount} item${selectedCount > 1 ? 's' : ''}`;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between py-6 px-6 border-b border-neutral-200">
-          <h2 className="font-roboto text-subtitle font-medium text-canary-black-1">
-            Add items
-          </h2>
-          <button
-            onClick={onClose}
-            className="flex items-center justify-center p-2.5 rounded bg-transparent border-none cursor-pointer hover:bg-gray-50"
-          >
-            <Icon path={mdiClose} size={0.67} />
-          </button>
+    <AnimatedModal 
+      isOpen={isOpen} 
+      onClose={handleCancel}
+      maxWidth="max-w-2xl"
+      className="max-h-[90vh] flex flex-col"
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between py-6 px-6 border-b border-neutral-200">
+        <h2 className="font-roboto text-subtitle font-medium text-canary-black-1">
+          Add items
+        </h2>
+        <button
+          onClick={handleCancel}
+          className="flex items-center justify-center p-2.5 rounded bg-transparent border-none cursor-pointer hover:bg-gray-50"
+        >
+          <Icon path={mdiClose} size={0.67} />
+        </button>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-hidden px-6 pt-6 pb-4">
+        {/* Column Headers */}
+        <div className="flex items-center justify-between px-4 pb-1 font-roboto text-caption-sm font-medium text-canary-black-3 uppercase">
+          <div className="w-36">Item</div>
+          <div className="w-36">Menus</div>
+          <div className="w-16">Price</div>
+          <div className="w-6"></div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-hidden px-6 pt-6 pb-4">
-          {/* Column Headers */}
-          <div className="flex items-center justify-between px-4 pb-1 font-roboto text-caption-sm font-medium text-canary-black-3 uppercase">
-            <div className="w-36">Item</div>
-            <div className="w-36">Menus</div>
-            <div className="w-16">Price</div>
-            <div className="w-6"></div>
-          </div>
+        {/* Items List */}
+        <div className="border border-neutral-200 rounded-lg overflow-hidden">
+          <div className="max-h-[600px] overflow-y-auto">
+            {availableItems.map((item, index) => {
+              const isDisabled = existingItemIds.includes(item.id);
+              const isSelected = selectedItemIds.has(item.id);
+              const isLast = index === availableItems.length - 1;
 
-          {/* Items List */}
-          <div className="border border-neutral-200 rounded-lg overflow-hidden">
-            <div className="max-h-[600px] overflow-y-auto">
-              {availableItems.map((item, index) => {
-                const isDisabled = existingItemIds.includes(item.id);
-                const isSelected = selectedItemIds.has(item.id);
-                const isLast = index === availableItems.length - 1;
-
-                return (
-                  <ItemRow
-                    key={item.id}
-                    item={item}
-                    isSelected={isSelected}
-                    isDisabled={isDisabled}
-                    onSelectionChange={handleSelectionChange}
-                    isLast={isLast}
-                  />
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-6 border-t border-neutral-200">
-          <Button variant="secondary" onClick={onGoToItemLibrary}>
-            Go to Item Library
-          </Button>
-          
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" onClick={handleCancel}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddItems} disabled={selectedCount === 0}>
-              {addButtonText}
-            </Button>
+              return (
+                <ItemRow
+                  key={item.id}
+                  item={item}
+                  isSelected={isSelected}
+                  isDisabled={isDisabled}
+                  onSelectionChange={handleSelectionChange}
+                  isLast={isLast}
+                />
+              );
+            })}
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between px-6 py-6 border-t border-neutral-200">
+        <Button variant="secondary" onClick={onGoToItemLibrary}>
+          Go to Item Library
+        </Button>
+        
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" onClick={handleCancel}>
+            Cancel
+          </Button>
+          <Button onClick={handleAddItems} disabled={selectedCount === 0}>
+            {addButtonText}
+          </Button>
+        </div>
+      </div>
+    </AnimatedModal>
   );
 };

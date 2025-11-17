@@ -3,9 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import Icon from '@mdi/react';
 import { 
-  mdiClose
+  mdiClose,
+  mdiViewList
 } from '@mdi/js';
 import { MenuItemPlaceholder } from './MenuItemPlaceholder';
+import { saveNewOrder } from '@/utils/orderStorage';
 
 interface SectionItem {
   id: string;
@@ -28,6 +30,7 @@ interface CartEntry {
 interface OrderConfirmationProps {
   onClose: () => void;
   cartEntries: CartEntry[];
+  onGoToOrderManagement?: () => void;
 }
 
 // Button component
@@ -122,11 +125,13 @@ const OrderItemRow: React.FC<OrderItemRowProps> = ({ item }) => {
 
 export const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ 
   onClose,
-  cartEntries
+  cartEntries,
+  onGoToOrderManagement
 }) => {
   const [localCartItems, setLocalCartItems] = useState<CartItem[]>([]);
+  const [orderSaved, setOrderSaved] = useState(false);
 
-  // Convert cart entries to local cart items with prices
+  // Convert cart entries to local cart items with prices and save order
   useEffect(() => {
     const items: CartItem[] = cartEntries.map(entry => {
       // Generate consistent mock price based on item name hash
@@ -141,7 +146,18 @@ export const OrderConfirmation: React.FC<OrderConfirmationProps> = ({
     });
     
     setLocalCartItems(items);
-  }, [cartEntries]);
+    
+    // Save order to shared storage when component mounts (order is confirmed)
+    if (cartEntries.length > 0 && !orderSaved) {
+      try {
+        saveNewOrder(cartEntries);
+        setOrderSaved(true);
+        console.log('Order saved to shared storage');
+      } catch (error) {
+        console.error('Error saving order:', error);
+      }
+    }
+  }, [cartEntries, orderSaved]);
 
   // Calculate total
   const estimatedTotal = localCartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
@@ -158,8 +174,8 @@ export const OrderConfirmation: React.FC<OrderConfirmationProps> = ({
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100 p-8">
-      {/* Back to Menu Management Button */}
-      <div className="fixed top-8 left-8 z-50">
+      {/* Action Buttons Outside Mobile Frame */}
+      <div className="fixed top-8 left-8 z-50 flex gap-3">
         <Button
           onClick={onClose}
           variant="outlined"
@@ -168,6 +184,16 @@ export const OrderConfirmation: React.FC<OrderConfirmationProps> = ({
         >
           Close Confirmation
         </Button>
+        {onGoToOrderManagement && (
+          <Button
+            onClick={onGoToOrderManagement}
+            variant="primary"
+            icon={<Icon path={mdiViewList} size={0.8} />}
+            iconPosition="left"
+          >
+            View in Order Management
+          </Button>
+        )}
       </div>
 
       {/* Mobile Frame */}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Icon from '@mdi/react';
 import clsx from 'clsx';
 import { colors, spacing } from '@/lib/design-tokens';
@@ -28,6 +28,9 @@ import {
   mdiDelete
 } from '@mdi/js';
 import { CreateSectionModal } from './CreateSectionModal';
+import { MobileMenuOrdering } from './MobileMenuOrdering';
+import { FOOD_ITEMS, convertToSectionItem } from '@/data/foodItems';
+import { AnimatedSection } from './PageTransition';
 
 // Import the CanarySidebar component
 import CanarySidebar, { SidebarVariant, type SidebarSection, type SidebarNavigationItem } from './CanarySidebar';
@@ -145,6 +148,16 @@ interface MenuSection {
   items: Array<{ id: string; name: string; image: string; }>;
 }
 
+interface MenuWithSections {
+  name: string;
+  entryPoint: string;
+  sections?: {
+    id: string;
+    title: string;
+    items: Array<{ id: string; name: string; image: string; }>;
+  }[];
+}
+
 interface EditMenuPageProps {
   onBack?: () => void;
   menuName?: string;
@@ -154,6 +167,7 @@ interface EditMenuPageProps {
   sections?: MenuSection[];
   onSave?: (externalName: string, internalName: string, isNew: boolean) => boolean;
   onEditSection?: (sectionId: string) => void;
+  onCreateSection?: (sectionName: string) => void;
   onAddAvailabilityHours?: () => void;
 }
 
@@ -166,6 +180,7 @@ export const EditMenuPage: React.FC<EditMenuPageProps> = ({
   sections,
   onSave,
   onEditSection,
+  onCreateSection,
   onAddAvailabilityHours
 }) => {
   const [internalMenuName, setInternalMenuName] = useState(internalName || menuName);
@@ -180,6 +195,77 @@ export const EditMenuPage: React.FC<EditMenuPageProps> = ({
   );
   const [isCreateSectionModalOpen, setIsCreateSectionModalOpen] = useState(false);
 
+  // Helper function to get sample items for a section
+  const getSampleItemsForSection = (sectionTitle: string) => {
+    const lowerTitle = sectionTitle.toLowerCase();
+    
+    if (lowerTitle.includes('cold') || lowerTitle.includes('appetizer')) {
+      return FOOD_ITEMS.filter(item => ['Salad', 'Sushi', 'Fresh Oysters (3pc)', 'Yellowtail Sashimi Jalapeno'].includes(item.name)).slice(0, 4);
+    } else if (lowerTitle.includes('main') || lowerTitle.includes('entree')) {
+      return FOOD_ITEMS.filter(item => ['Pizza', 'Pasta', 'Burrito', 'Club Sandwich'].includes(item.name)).slice(0, 4);
+    } else if (lowerTitle.includes('side')) {
+      return FOOD_ITEMS.filter(item => ['French Fries', 'Side Salad'].includes(item.name)).slice(0, 3);
+    } else if (lowerTitle.includes('dessert') || lowerTitle.includes('sweet')) {
+      return FOOD_ITEMS.filter(item => ['Brownie'].includes(item.name)).slice(0, 2);
+    } else {
+      // Default mixed items
+      return FOOD_ITEMS.slice(0, 3);
+    }
+  };
+
+  // Create preview menu data that syncs with configuration
+  const previewMenus: MenuWithSections[] = useMemo(() => {
+    if (!externalMenuName) return [];
+    
+    // Convert localSections to menu sections format for preview
+    let menuSections = localSections
+      .filter(section => section.enabled) // Only show enabled sections
+      .map(section => {
+        // Get items for this section from the original sections data or create sample items
+        const originalSection = sections?.find(s => s.id === section.id);
+        let sectionItems = [];
+        
+        if (originalSection && originalSection.items.length > 0) {
+          // Use real items if available
+          sectionItems = originalSection.items.map(item => convertToSectionItem({
+            id: item.id,
+            name: item.name,
+            description: '',
+            price: 0,
+            image: item.image,
+            menus: [],
+            available: true
+          }));
+        } else {
+          // Create sample items based on section name for preview
+          const sampleItems = getSampleItemsForSection(section.title);
+          sectionItems = sampleItems.map(item => convertToSectionItem(item));
+        }
+        
+        return {
+          id: section.id,
+          title: section.title,
+          items: sectionItems
+        };
+      });
+    
+    // If no sections exist, show a sample section to demonstrate the preview
+    if (menuSections.length === 0) {
+      const sampleItems = FOOD_ITEMS.slice(0, 3).map(item => convertToSectionItem(item));
+      menuSections = [{
+        id: 'sample-section',
+        title: 'Sample Items',
+        items: sampleItems
+      }];
+    }
+    
+    return [{
+      name: externalMenuName,
+      entryPoint: 'mobile',
+      sections: menuSections
+    }];
+  }, [externalMenuName, localSections, sections, getSampleItemsForSection]);
+
   const handleSectionToggle = (id: string, enabled: boolean) => {
     setLocalSections(localSections.map(section => 
       section.id === id ? { ...section, enabled } : section
@@ -192,14 +278,11 @@ export const EditMenuPage: React.FC<EditMenuPageProps> = ({
   };
 
   const handleCreateSection = (sectionName: string) => {
-    const newSection = {
-      id: sectionName.toLowerCase().replace(/\s+/g, '-'),
-      title: sectionName,
-      subtitle: '0 items',
-      enabled: true
-    };
-    setLocalSections([...localSections, newSection]);
+    // Route to EditSection page for new section instead of immediately adding it
     setIsCreateSectionModalOpen(false);
+    if (onCreateSection) {
+      onCreateSection(sectionName);
+    }
   };
 
   const handleDeleteSection = (id: string) => {
@@ -364,30 +447,33 @@ export const EditMenuPage: React.FC<EditMenuPageProps> = ({
         {/* Content Area */}
         <div className="flex-1 flex bg-white overflow-hidden">
           {/* Left Configuration Panel */}
-          <div className="flex-1 max-w-lg border-r border-neutral-200 flex flex-col">
+          <div className="flex-1 border-r border-neutral-200 flex flex-col">
             {/* Page Header */}
-            <div className="border-b border-neutral-200 py-4 px-6 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={onBack}
-                  className="flex items-center justify-center p-2 hover:bg-gray-50 rounded"
-                >
-                  <Icon path={mdiArrowLeft} size={1} />
-                </button>
-                <h1 className="font-roboto text-subtitle font-medium text-canary-black-1">
-                  {isNewMenu ? (externalMenuName || 'New Menu') : externalMenuName}
-                </h1>
+            <AnimatedSection delay={0}>
+              <div className="border-b border-neutral-200 py-4 px-6 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={onBack}
+                    className="flex items-center justify-center p-2 hover:bg-gray-50 rounded"
+                  >
+                    <Icon path={mdiArrowLeft} size={1} />
+                  </button>
+                  <h1 className="font-roboto text-subtitle font-medium text-canary-black-1">
+                    {isNewMenu ? (externalMenuName || 'New Menu') : externalMenuName}
+                  </h1>
+                </div>
+                <Button onClick={handleSave}>Save</Button>
               </div>
-              <Button onClick={handleSave}>Save</Button>
-            </div>
+            </AnimatedSection>
 
             {/* Configuration Content */}
             <div className="flex-1 overflow-auto py-8 px-6 space-y-6">
               {/* Basic Info Section */}
-              <div className="border border-neutral-200 rounded-lg p-6 bg-white">
-                <h2 className="font-roboto text-subtitle font-semibold text-canary-black-1 mb-6">
-                  Basic info
-                </h2>
+              <AnimatedSection delay={80}>
+                <div className="border border-neutral-200 rounded-lg p-6 bg-white">
+                  <h2 className="font-roboto text-subtitle font-semibold text-canary-black-1 mb-6">
+                    Basic info
+                  </h2>
                 
                 <div className="space-y-4">
                   {/* External Menu Name */}
@@ -425,9 +511,11 @@ export const EditMenuPage: React.FC<EditMenuPageProps> = ({
                   </div>
                 </div>
               </div>
+              </AnimatedSection>
 
               {/* Sections */}
-              <div className="border border-neutral-200 rounded-lg p-6 bg-white">
+              <AnimatedSection delay={160}>
+                <div className="border border-neutral-200 rounded-lg p-6 bg-white">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="font-roboto text-subtitle font-semibold text-canary-black-1">
                     Sections
@@ -458,28 +546,143 @@ export const EditMenuPage: React.FC<EditMenuPageProps> = ({
                   )}
                 </div>
               </div>
+              </AnimatedSection>
 
               {/* Availability */}
-              <div className="border border-neutral-200 rounded-lg p-6 bg-white">
-                <div className="flex items-center justify-between">
-                  <h2 className="font-roboto text-subtitle font-semibold text-canary-black-1">
-                    Availability
-                  </h2>
-                  <button 
-                    onClick={onAddAvailabilityHours}
-                    className="font-roboto text-body-sm text-canary-blue-1 hover:underline"
+              <AnimatedSection delay={240}>
+                <div className="border border-neutral-200 rounded-lg p-6 bg-white">
+                  <div className="flex items-center justify-between">
+                    <h2 className="font-roboto text-subtitle font-semibold text-canary-black-1">
+                      Availability
+                    </h2>
+                    <button 
+                      onClick={onAddAvailabilityHours}
+                      className="font-roboto text-body-sm text-canary-blue-1 hover:underline"
+                    >
+                      Add hours
+                    </button>
+                  </div>
+                </div>
+              </AnimatedSection>
+            </div>
+          </div>
+
+          {/* Right Mobile Preview Panel */}
+          <AnimatedSection delay={320} className="flex-1">
+            <div className="h-full bg-gray-100 flex flex-col items-center py-8 px-6">
+              
+              {/* Mobile Preview Container */}
+            <div className="flex-1 w-full max-w-md flex items-center justify-center">
+              <div 
+                className="relative bg-white overflow-hidden shadow-xl"
+                style={{
+                  width: '320px',  // Increased from 280px
+                  height: '640px', // Increased from 607px 
+                  borderRadius: '28px', // Scaled down from 44px
+                  boxShadow: '0px 8px 16px 0px rgba(0,0,0,0.16)'
+                }}
+              >
+                {/* Mobile Preview Content - Clean preview without demo elements */}
+                <div className="h-full flex flex-col relative">
+
+                  {/* Header */}
+                  <div className="flex items-center justify-center px-4 py-4 bg-white shrink-0" style={{
+                    borderTopLeftRadius: '28px',
+                    borderTopRightRadius: '28px'
+                  }}>
+                    <h1 className="font-roboto text-2xl font-semibold text-black text-center">
+                      In-room dining
+                    </h1>
+                  </div>
+
+                  {/* Menu Title */}
+                  <div className="px-4 py-3 bg-white shrink-0">
+                    <h2 className="font-roboto text-[32px] font-medium text-black leading-[48px]">
+                      {externalMenuName || 'Menu Preview'}
+                    </h2>
+                  </div>
+
+                  {/* Scrollable Content */}
+                  <div 
+                    className="flex-1 overflow-y-scroll bg-white px-4 py-6" 
+                    style={{ 
+                      minHeight: 0,
+                      maxHeight: '100%',
+                      WebkitOverflowScrolling: 'touch'
+                    }}
                   >
-                    Add hours
-                  </button>
+                    <div style={{ pointerEvents: 'none' }}>
+                      {previewMenus[0]?.sections?.map((section) => (
+                        <div key={section.id} className="mb-6 last:mb-0">
+                          {/* Section Header */}
+                          <h3 className="font-roboto text-xl font-medium text-black mb-3">
+                            {section.title}
+                          </h3>
+                          
+                          {/* Section Items */}
+                          <div className="border border-neutral-200 rounded-lg overflow-hidden">
+                            {section.items.length === 0 ? (
+                              <div className="p-8 text-center">
+                                <p className="text-gray-500 font-roboto text-sm">
+                                  No items in this section yet
+                                </p>
+                              </div>
+                            ) : (
+                              section.items.map((item, index) => (
+                                <div key={item.id} className={index < section.items.length - 1 ? "border-b border-neutral-200" : ""}>
+                                  <div className="flex items-center gap-4 p-3">
+                                    {/* Item Image or Placeholder */}
+                                    {item.image ? (
+                                      <img 
+                                        src={item.image} 
+                                        alt={item.name}
+                                        className="w-16 h-16 rounded-lg object-cover shrink-0"
+                                      />
+                                    ) : (
+                                      <div className="w-16 h-16 rounded-lg bg-gray-200 shrink-0 flex items-center justify-center">
+                                        <span className="text-gray-400 text-xs">No image</span>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Item Info */}
+                                    <div className="flex-1 min-w-0">
+                                      <h4 className="font-roboto text-sm font-medium text-black mb-0.5 truncate">
+                                        {item.name}
+                                      </h4>
+                                      <p className="font-roboto text-sm font-normal text-black">
+                                        ${Math.floor((item.name.length * 7 + item.id.length * 3) % 30) + 15}
+                                      </p>
+                                    </div>
+                                    
+                                    {/* Add Button (disabled for preview) */}
+                                    <div className="shrink-0">
+                                      <button
+                                        disabled
+                                        className="w-9 h-9 flex items-center justify-center rounded bg-black text-white opacity-50 cursor-not-allowed"
+                                      >
+                                        <span className="text-white text-lg">+</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      )) || (
+                        <div className="p-8 text-center">
+                          <p className="text-gray-500 font-roboto text-sm">
+                            Add sections to see preview content
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-
-          {/* Right Mobile Preview Placeholder */}
-          <div className="flex-1 bg-canary-black-6 flex items-center justify-center">
-            {/* Grey background placeholder - will add mobile preview later */}
-          </div>
+          </AnimatedSection>
         </div>
       </div>
 
