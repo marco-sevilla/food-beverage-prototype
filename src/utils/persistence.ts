@@ -16,6 +16,7 @@ export interface PersistedData {
     name: string;
     room: string;
   };
+  viewMode?: 'mobile' | 'desktop';
   cart?: Record<string, number>;
   images?: Record<string, string>; // itemId -> dataURL mapping
   items?: Record<string, any>; // itemId -> item data mapping
@@ -89,6 +90,16 @@ export const saveGuestInfo = (guestInfo: PersistedData['guestInfo']) => {
 export const getGuestInfo = (): { name: string; room: string } => {
   const data = loadData();
   return data.guestInfo || { name: 'John Smith', room: '1205' };
+};
+
+export const saveViewMode = (viewMode: 'mobile' | 'desktop') => {
+  const existing = loadData();
+  saveData({ ...existing, viewMode });
+};
+
+export const getViewMode = (): 'mobile' | 'desktop' => {
+  const data = loadData();
+  return data.viewMode || 'mobile';
 };
 
 export const saveImage = (itemId: string, imageDataUrl: string) => {

@@ -16,8 +16,9 @@ import { MenuItemPlaceholder } from './MenuItemPlaceholder';
 import { OrderingClosedModal } from './OrderingClosedModal';
 import { MenuUnavailableMessage } from './MenuUnavailableMessage';
 import { isMenuAvailable, getMenuAvailabilityInfo, getDefaultMenu } from '@/utils/menuAvailability';
-import { loadData, saveDemoTime, saveSelectedMenu, saveCart, getImage, getItem, saveGuestInfo, getGuestInfo } from '@/utils/persistence';
+import { loadData, saveDemoTime, saveSelectedMenu, saveCart, getImage, getItem, saveGuestInfo, getGuestInfo, saveViewMode, getViewMode } from '@/utils/persistence';
 import CanaryInput from '../../temp-components/CanaryInput';
+import CanarySegmentedControl from '../../temp-components/CanarySegmentedControl';
 import { InputSize } from '../../temp-components/types';
 
 // Time Controls Component
@@ -28,12 +29,14 @@ interface TimeControlsProps {
   ampm: 'AM' | 'PM';
   guestName: string;
   roomNumber: string;
+  viewMode: 'mobile' | 'desktop';
   onDayChange: (day: string) => void;
   onHourChange: (hour: number) => void;
   onMinuteChange: (minute: number) => void;
   onAmPmChange: (ampm: 'AM' | 'PM') => void;
   onGuestNameChange: (guestName: string) => void;
   onRoomNumberChange: (roomNumber: string) => void;
+  onViewModeChange: (viewMode: 'mobile' | 'desktop') => void;
 }
 
 const TimeControls: React.FC<TimeControlsProps> = ({
@@ -43,12 +46,14 @@ const TimeControls: React.FC<TimeControlsProps> = ({
   ampm,
   guestName,
   roomNumber,
+  viewMode,
   onDayChange,
   onHourChange,
   onMinuteChange,
   onAmPmChange,
   onGuestNameChange,
-  onRoomNumberChange
+  onRoomNumberChange,
+  onViewModeChange
 }) => {
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const hours = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -134,6 +139,21 @@ const TimeControls: React.FC<TimeControlsProps> = ({
             onChange={(e) => onRoomNumberChange(e.target.value)}
             placeholder="Enter room number"
             size={InputSize.COMPACT}
+          />
+        </div>
+
+        {/* View Mode Toggle */}
+        <div>
+          <label className="block font-roboto text-caption font-medium text-canary-black-2 mb-1">
+            Preview Mode
+          </label>
+          <CanarySegmentedControl
+            options={[
+              { label: 'Mobile', value: 'mobile' },
+              { label: 'Desktop', value: 'desktop' }
+            ]}
+            value={viewMode}
+            onChange={(value) => onViewModeChange(value as 'mobile' | 'desktop')}
           />
         </div>
 
@@ -574,6 +594,7 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
   const [demoAmPm, setDemoAmPm] = useState<'AM' | 'PM'>(savedData.demoTime?.ampm || 'AM');
   const [guestName, setGuestName] = useState(getGuestInfo().name);
   const [roomNumber, setRoomNumber] = useState(getGuestInfo().room);
+  const [viewMode, setViewMode] = useState<'mobile' | 'desktop'>(getViewMode());
 
   // Initialize with the first available menu or saved menu
   const menuNames = useMemo(() => menus.map(menu => menu.name), [menus]);
@@ -826,18 +847,25 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
   const totalCartItems = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 p-8">
-      {/* Back to Mobile Landing Button */}
-      <div className="fixed top-8 left-8 z-50">
-        <Button
-          onClick={onBack}
-          variant="outlined"
-          icon={<Icon path={mdiArrowLeft} size={0.8} />}
-          iconPosition="left"
-        >
-          Back to Mobile Landing
-        </Button>
-      </div>
+    <div className={clsx(
+      "min-h-screen bg-gray-100",
+      viewMode === 'mobile' 
+        ? "flex items-center justify-center p-8"
+        : "p-0"
+    )}>
+      {/* Back to Mobile Landing Button - Only show in mobile mode */}
+      {viewMode === 'mobile' && (
+        <div className="fixed top-8 left-8 z-50">
+          <Button
+            onClick={onBack}
+            variant="outlined"
+            icon={<Icon path={mdiArrowLeft} size={0.8} />}
+            iconPosition="left"
+          >
+            Back to Mobile Landing
+          </Button>
+        </div>
+      )}
 
       {/* Demo Time Controls */}
       <TimeControls
@@ -847,6 +875,7 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
         ampm={demoAmPm}
         guestName={guestName}
         roomNumber={roomNumber}
+        viewMode={viewMode}
         onDayChange={(day) => {
           setDemoDay(day);
           saveDemoTime({ day, hour: demoHour, minute: demoMinute, ampm: demoAmPm });
@@ -871,16 +900,29 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
           setRoomNumber(room);
           saveGuestInfo({ name: guestName, room });
         }}
+        onViewModeChange={(mode) => {
+          setViewMode(mode);
+          saveViewMode(mode);
+        }}
       />
 
-      {/* Mobile Frame */}
+      {/* Responsive Frame */}
       <div 
-        className="relative bg-white overflow-hidden shadow-xl"
-        style={{
+        className={clsx(
+          "relative bg-white overflow-hidden",
+          viewMode === 'mobile' 
+            ? "shadow-xl" 
+            : "min-h-screen"
+        )}
+        style={viewMode === 'mobile' ? {
           width: '430px',
           height: '932px',
           borderRadius: '44px',
           boxShadow: '0px 8px 16px 0px rgba(0,0,0,0.16)'
+        } : {
+          width: '100%',
+          maxWidth: '1000px',
+          margin: '0 auto'
         }}
       >
         {/* Preview Mode Banner - Very Top */}
@@ -907,23 +949,45 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
         )}
 
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-4 bg-white">
-          <Button 
-            onClick={onBack}
-            variant="icon"
-            icon={<Icon path={mdiArrowLeft} size={1} />}
-          />
+        <div className={clsx(
+          "flex items-center justify-between bg-white",
+          viewMode === 'mobile' ? "px-4 py-4" : "px-6 py-6"
+        )}>
+          {viewMode === 'mobile' ? (
+            <Button 
+              onClick={onBack}
+              variant="icon"
+              icon={<Icon path={mdiArrowLeft} size={1} />}
+            />
+          ) : (
+            <Button
+              onClick={onBack}
+              variant="outlined"
+              icon={<Icon path={mdiArrowLeft} size={0.8} />}
+              iconPosition="left"
+            >
+              Back to Menu Management
+            </Button>
+          )}
           
-          <h1 className="font-roboto text-2xl font-semibold text-black text-center">
+          <h1 className={clsx(
+            "font-roboto font-semibold text-black text-center",
+            viewMode === 'mobile' ? "text-2xl" : "text-3xl"
+          )}>
             In-room dining
           </h1>
           
-          <div className="w-10 h-10 opacity-0" />
+          <div className={clsx(
+            "opacity-0",
+            viewMode === 'mobile' ? "w-10 h-10" : "w-0 h-0"
+          )} />
         </div>
 
         {/* Menu Dropdown - Hidden in preview mode */}
         {!isPreviewMode && (
-          <div style={{ padding: `${spacing[3]} ${spacing[4]}` }}>
+          <div className={clsx(
+            viewMode === 'mobile' ? "px-4" : "px-6"
+          )} style={{ paddingTop: spacing[3], paddingBottom: spacing[3] }}>
             <MenuSelect
               options={menuOptions}
               value={selectedMenuName}
@@ -934,15 +998,25 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
         )}
 
         {/* Menu Title */}
-        <div className="px-4 py-3">
-          <h2 className="font-roboto text-[32px] font-medium text-black leading-[48px]">
+        <div className={clsx(
+          viewMode === 'mobile' ? "px-4 py-3" : "px-6 py-4"
+        )}>
+          <h2 className={clsx(
+            "font-roboto font-medium text-black",
+            viewMode === 'mobile' 
+              ? "text-[32px] leading-[48px]" 
+              : "text-[40px] leading-[56px]"
+          )}>
             {selectedMenuName}
           </h2>
         </div>
 
         {/* Menu Unavailable Message - Show when menu is not currently available */}
         {!isCurrentMenuAvailable && (
-          <div className="px-4 pb-3">
+          <div className={clsx(
+            "pb-3",
+            viewMode === 'mobile' ? "px-4" : "px-6"
+          )}>
             <MenuUnavailableMessage
               menuName={selectedMenuName}
               timeInfo={menuOptions.find(opt => opt.value === selectedMenuName)?.timeInfo || ''}
@@ -953,7 +1027,10 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
 
         {/* Section Tabs - Only show if there are multiple sections AND content is scrollable */}
         {shouldShowTabs && (
-          <div className="px-4 border-b border-neutral-200">
+          <div className={clsx(
+            "border-b border-neutral-200",
+            viewMode === 'mobile' ? "px-4" : "px-6"
+          )}>
             <div className="flex">
               {menuSections.map((section) => (
                 <Tab
@@ -971,8 +1048,11 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
         {/* Scrollable Content */}
         <div 
           ref={scrollContainerRef}
-          className="flex-1 overflow-y-auto px-4 py-6"
-          style={{ height: 'calc(100% - 240px)' }}
+          className={clsx(
+            "flex-1 overflow-y-auto py-6",
+            viewMode === 'mobile' ? "px-4" : "px-6"
+          )}
+          style={viewMode === 'mobile' ? { height: 'calc(100% - 240px)' } : {}}
         >
           {menuSections.map((section) => (
             <div 
@@ -982,7 +1062,10 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
               className="mb-6 last:mb-0"
             >
               {/* Section Header */}
-              <h3 className="font-roboto text-xl font-medium text-black mb-3">
+              <h3 className={clsx(
+                "font-roboto font-medium text-black mb-3",
+                viewMode === 'mobile' ? "text-xl" : "text-2xl"
+              )}>
                 {section.title}
               </h3>
               
@@ -1015,9 +1098,16 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
 
         {/* Sticky Footer - Cart Button */}
         {totalCartItems > 0 && (
-          <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-neutral-200 p-4">
+          <div className={clsx(
+            "bg-white border-t border-neutral-200",
+            viewMode === 'mobile' 
+              ? "absolute bottom-0 left-0 right-0 p-4"
+              : "sticky bottom-0 p-6"
+          )}>
             <Button 
-              className="w-full" 
+              className={clsx(
+                viewMode === 'mobile' ? "w-full" : "w-full max-w-md mx-auto"
+              )}
               onClick={onViewCart}
             >
               View cart ({totalCartItems})
