@@ -1,3 +1,5 @@
+import { getGuestInfo } from './persistence';
+
 // Types for order management
 interface OrderItem {
   id: string;
@@ -107,9 +109,12 @@ export const saveNewOrder = (cartEntries: CartEntry[]): { orderId: string; order
   });
 
   const totalItems = cartEntries.reduce((sum, entry) => sum + entry.quantity, 0);
-  const guestName = 'Emily Smith'; // Guest name from OrderConfirmation
-  const roomNumber = '365'; // Room number from OrderConfirmation
-  const guestEmail = 'esmith@gmail.com';
+  
+  // Get current guest information
+  const guestInfo = getGuestInfo();
+  const guestName = guestInfo.name;
+  const roomNumber = guestInfo.room;
+  const guestEmail = guestName.toLowerCase().replace(' ', '') + '@gmail.com'; // Generate email from name
 
   // Create order for table
   const order: Order = {

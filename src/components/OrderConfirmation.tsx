@@ -8,6 +8,7 @@ import {
 } from '@mdi/js';
 import { MenuItemPlaceholder } from './MenuItemPlaceholder';
 import { saveNewOrder } from '@/utils/orderStorage';
+import { getGuestInfo } from '@/utils/persistence';
 
 interface SectionItem {
   id: string;
@@ -130,6 +131,9 @@ export const OrderConfirmation: React.FC<OrderConfirmationProps> = ({
 }) => {
   const [localCartItems, setLocalCartItems] = useState<CartItem[]>([]);
   const [orderSaved, setOrderSaved] = useState(false);
+  
+  // Get guest information
+  const guestInfo = getGuestInfo();
 
   // Convert cart entries to local cart items with prices and save order
   useEffect(() => {
@@ -249,11 +253,11 @@ export const OrderConfirmation: React.FC<OrderConfirmationProps> = ({
           <div className="border border-neutral-200 rounded-lg p-4 mb-6">
             <div className="flex items-center justify-between mb-2">
               <span className="font-roboto text-sm font-medium text-black">Guest</span>
-              <span className="font-roboto text-sm font-normal text-gray-600">Emily Smith</span>
+              <span className="font-roboto text-sm font-normal text-gray-600">{guestInfo.name}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="font-roboto text-sm font-medium text-black">Room</span>
-              <span className="font-roboto text-sm font-normal text-gray-600">365</span>
+              <span className="font-roboto text-sm font-normal text-gray-600">{guestInfo.room}</span>
             </div>
           </div>
 

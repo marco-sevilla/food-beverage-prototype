@@ -10,6 +10,7 @@ import {
 } from '@mdi/js';
 import { colors, typography } from '@/lib/design-tokens';
 import { MenuItemPlaceholder } from './MenuItemPlaceholder';
+import { getGuestInfo, loadData } from '@/utils/persistence';
 
 interface SectionItem {
   id: string;
@@ -173,6 +174,11 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
   isPreviewMode = false
 }) => {
   const [localCartItems, setLocalCartItems] = useState<CartItem[]>([]);
+  
+  // Get guest information
+  const guestInfo = getGuestInfo();
+  const savedData = loadData();
+  const demoTime = savedData.demoTime || { day: 'Monday', hour: 7, minute: 30, ampm: 'AM' as const };
 
   // Convert cart entries to local cart items with prices
   useEffect(() => {
@@ -230,7 +236,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
           Demo Time
         </h3>
         <div className="text-sm text-canary-black-4 font-roboto">
-          Monday, 7:30 AM
+          {demoTime.day}, {demoTime.hour}:{demoTime.minute.toString().padStart(2, '0')} {demoTime.ampm}
         </div>
       </div>
 
@@ -305,11 +311,11 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
           <div className="border border-neutral-200 rounded-lg p-4 mb-6">
             <div className="flex items-center justify-between mb-2">
               <span className="font-roboto text-sm font-medium text-black">Guest</span>
-              <span className="font-roboto text-sm font-normal text-gray-600">Emily Smith</span>
+              <span className="font-roboto text-sm font-normal text-gray-600">{guestInfo.name}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="font-roboto text-sm font-medium text-black">Room</span>
-              <span className="font-roboto text-sm font-normal text-gray-600">365</span>
+              <span className="font-roboto text-sm font-normal text-gray-600">{guestInfo.room}</span>
             </div>
           </div>
 

@@ -12,6 +12,10 @@ export interface PersistedData {
     minute: number;
     ampm: 'AM' | 'PM';
   };
+  guestInfo?: {
+    name: string;
+    room: string;
+  };
   cart?: Record<string, number>;
   images?: Record<string, string>; // itemId -> dataURL mapping
   items?: Record<string, any>; // itemId -> item data mapping
@@ -75,6 +79,16 @@ export const saveSelectedMenu = (selectedMenu: string) => {
 export const saveCart = (cart: Record<string, number>) => {
   const existing = loadData();
   saveData({ ...existing, cart });
+};
+
+export const saveGuestInfo = (guestInfo: PersistedData['guestInfo']) => {
+  const existing = loadData();
+  saveData({ ...existing, guestInfo });
+};
+
+export const getGuestInfo = (): { name: string; room: string } => {
+  const data = loadData();
+  return data.guestInfo || { name: 'John Smith', room: '1205' };
 };
 
 export const saveImage = (itemId: string, imageDataUrl: string) => {

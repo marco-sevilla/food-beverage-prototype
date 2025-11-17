@@ -16,7 +16,9 @@ import { MenuItemPlaceholder } from './MenuItemPlaceholder';
 import { OrderingClosedModal } from './OrderingClosedModal';
 import { MenuUnavailableMessage } from './MenuUnavailableMessage';
 import { isMenuAvailable, getMenuAvailabilityInfo, getDefaultMenu } from '@/utils/menuAvailability';
-import { loadData, saveDemoTime, saveSelectedMenu, saveCart, getImage, getItem } from '@/utils/persistence';
+import { loadData, saveDemoTime, saveSelectedMenu, saveCart, getImage, getItem, saveGuestInfo, getGuestInfo } from '@/utils/persistence';
+import CanaryInput from '../../temp-components/CanaryInput';
+import { InputSize } from '../../temp-components/types';
 
 // Time Controls Component
 interface TimeControlsProps {
@@ -24,10 +26,14 @@ interface TimeControlsProps {
   hour: number;
   minute: number;
   ampm: 'AM' | 'PM';
+  guestName: string;
+  roomNumber: string;
   onDayChange: (day: string) => void;
   onHourChange: (hour: number) => void;
   onMinuteChange: (minute: number) => void;
   onAmPmChange: (ampm: 'AM' | 'PM') => void;
+  onGuestNameChange: (guestName: string) => void;
+  onRoomNumberChange: (roomNumber: string) => void;
 }
 
 const TimeControls: React.FC<TimeControlsProps> = ({
@@ -35,10 +41,14 @@ const TimeControls: React.FC<TimeControlsProps> = ({
   hour,
   minute,
   ampm,
+  guestName,
+  roomNumber,
   onDayChange,
   onHourChange,
   onMinuteChange,
-  onAmPmChange
+  onAmPmChange,
+  onGuestNameChange,
+  onRoomNumberChange
 }) => {
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const hours = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -104,6 +114,27 @@ const TimeControls: React.FC<TimeControlsProps> = ({
               <option value="PM">PM</option>
             </select>
           </div>
+        </div>
+
+        {/* Guest Information */}
+        <div>
+          <CanaryInput
+            label="Guest Name"
+            value={guestName}
+            onChange={(e) => onGuestNameChange(e.target.value)}
+            placeholder="Enter guest name"
+            size={InputSize.COMPACT}
+          />
+        </div>
+
+        <div>
+          <CanaryInput
+            label="Room Number"
+            value={roomNumber}
+            onChange={(e) => onRoomNumberChange(e.target.value)}
+            placeholder="Enter room number"
+            size={InputSize.COMPACT}
+          />
         </div>
 
         {/* Current Time Display */}
@@ -541,6 +572,8 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
   const [demoHour, setDemoHour] = useState(savedData.demoTime?.hour || 7);
   const [demoMinute, setDemoMinute] = useState(savedData.demoTime?.minute || 30);
   const [demoAmPm, setDemoAmPm] = useState<'AM' | 'PM'>(savedData.demoTime?.ampm || 'AM');
+  const [guestName, setGuestName] = useState(getGuestInfo().name);
+  const [roomNumber, setRoomNumber] = useState(getGuestInfo().room);
 
   // Initialize with the first available menu or saved menu
   const menuNames = useMemo(() => menus.map(menu => menu.name), [menus]);
@@ -812,6 +845,8 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
         hour={demoHour}
         minute={demoMinute}
         ampm={demoAmPm}
+        guestName={guestName}
+        roomNumber={roomNumber}
         onDayChange={(day) => {
           setDemoDay(day);
           saveDemoTime({ day, hour: demoHour, minute: demoMinute, ampm: demoAmPm });
@@ -827,6 +862,14 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
         onAmPmChange={(ampm) => {
           setDemoAmPm(ampm);
           saveDemoTime({ day: demoDay, hour: demoHour, minute: demoMinute, ampm });
+        }}
+        onGuestNameChange={(name) => {
+          setGuestName(name);
+          saveGuestInfo({ name, room: roomNumber });
+        }}
+        onRoomNumberChange={(room) => {
+          setRoomNumber(room);
+          saveGuestInfo({ name: guestName, room });
         }}
       />
 
