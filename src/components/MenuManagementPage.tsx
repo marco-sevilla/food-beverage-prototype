@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import Icon from '@mdi/react';
 import clsx from 'clsx';
 import { colors, spacing } from '@/lib/design-tokens';
+import CanarySwitch from './temp-components/CanarySwitch';
 import { AnimatedSection } from './PageTransition';
 import { CreateMenuModal } from './CreateMenuModal';
 import { CreateItemModal } from './CreateItemModal';
@@ -134,26 +135,7 @@ const MenuItem: React.FC<MenuItemProps> = ({ name, entryPoint, onEdit, onDelete,
 );
 
 
-// Toggle Switch component
-interface ToggleSwitchProps {
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}
-
-const ToggleSwitch: React.FC<ToggleSwitchProps> = ({ checked, onChange }) => (
-  <button
-    onClick={() => onChange(!checked)}
-    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-      checked ? 'bg-canary-blue-1' : 'bg-gray-300'
-    }`}
-  >
-    <span
-      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-        checked ? 'translate-x-6' : 'translate-x-1'
-      }`}
-    />
-  </button>
-);
+// ToggleSwitch component replaced with official CanarySwitch
 
 // Food Item component for Item Library tab
 interface FoodItemProps {
@@ -227,7 +209,7 @@ const FoodItem: React.FC<FoodItemProps> = ({
     
     {/* Availability Column - toggle + actions */}
     <div className="flex items-center gap-3 w-32 justify-end">
-      <ToggleSwitch checked={available} onChange={(checked) => onToggle(id, checked)} />
+      <CanarySwitch checked={available} onChange={(checked) => onToggle(id, checked)} size="normal" />
       <Button variant="icon" onClick={() => onEdit(id)}>
         <Icon path={mdiPencil} size={0.8} />
       </Button>
@@ -252,6 +234,7 @@ interface MenuManagementPageProps {
   initialActiveTab?: 'menus' | 'item-library' | 'settings';
   onGoToOrdering?: () => void;
   onBackToOrders?: () => void;
+  onCompendium?: () => void;
   prepTimeMinutes?: number;
   onUpdatePrepTime?: (prepTimeMinutes: number) => void;
 }
@@ -268,6 +251,7 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
   initialActiveTab = 'menus',
   onGoToOrdering,
   onBackToOrders,
+  onCompendium,
   prepTimeMinutes = 30,
   onUpdatePrepTime
 }) => {
@@ -650,6 +634,9 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
         backButton={backButton}
         onItemClick={(itemId) => {
           console.log('Clicked item:', itemId);
+          if (itemId === 'compendium' && onCompendium) {
+            onCompendium();
+          }
         }}
       />
 
@@ -755,7 +742,7 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
                   <div className="border border-neutral-200 rounded-lg overflow-hidden">
                     {menus.map((item, index) => (
                       <MenuItem
-                        key={item.name}
+                        key={`${index}-${item.name}`}
                         name={item.name}
                         entryPoint={item.entryPoint}
                         isLast={index === menus.length - 1}

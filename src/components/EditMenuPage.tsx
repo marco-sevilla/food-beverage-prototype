@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import Icon from '@mdi/react';
 import clsx from 'clsx';
 import { colors, spacing } from '@/lib/design-tokens';
+import CanarySwitch from './temp-components/CanarySwitch';
 import { 
   mdiArrowLeft, 
   mdiHome, 
@@ -123,26 +124,7 @@ const Button: React.FC<ButtonProps> = ({ children, variant = 'primary', onClick 
   );
 };
 
-// Toggle Switch component
-interface ToggleSwitchProps {
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}
-
-const ToggleSwitch: React.FC<ToggleSwitchProps> = ({ checked, onChange }) => (
-  <button
-    onClick={() => onChange(!checked)}
-    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-      checked ? 'bg-canary-blue-1' : 'bg-gray-300'
-    }`}
-  >
-    <span
-      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-        checked ? 'translate-x-6' : 'translate-x-1'
-      }`}
-    />
-  </button>
-);
+// ToggleSwitch component replaced with official CanarySwitch
 
 // Sortable Section Item component
 interface SectionItemProps {
@@ -223,7 +205,7 @@ const SortableSectionItem: React.FC<SectionItemProps> = ({
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <ToggleSwitch checked={enabled} onChange={onToggle} />
+        <CanarySwitch checked={enabled} onChange={onToggle} size="normal" />
         <Button variant="icon" onClick={onEdit}>
           <Icon path={mdiPencil} size={0.8} />
         </Button>
@@ -259,7 +241,7 @@ const SectionItem: React.FC<SectionItemProps> = ({
       </div>
     </div>
     <div className="flex items-center gap-3">
-      <ToggleSwitch checked={enabled} onChange={() => {}} />
+      <CanarySwitch checked={enabled} onChange={() => {}} size="normal" />
       <Button variant="icon" onClick={() => {}}>
         <Icon path={mdiPencil} size={0.8} />
       </Button>

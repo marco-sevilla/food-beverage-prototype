@@ -26,6 +26,9 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@canary-ui/*": [
+        "../components/canary-ui/*"
       ]
     }
   },

@@ -181,6 +181,7 @@ interface MobileMenuOrderingProps {
   onUpdateQuantity?: (item: SectionItem, quantity: number) => void;
   onAddItemToCart?: (item: SectionItem, quantity: number, specialRequests?: string) => void;
   isPreviewMode?: boolean;
+  connectedMenus?: string[]; // Filter menus to only show these connected menus
 }
 
 interface SectionItem {
@@ -582,7 +583,8 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
   cart = {},
   onUpdateQuantity,
   onAddItemToCart,
-  isPreviewMode = false
+  isPreviewMode = false,
+  connectedMenus = []
 }) => {
   // Load saved data
   const savedData = loadData();
@@ -596,10 +598,33 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
   const [roomNumber, setRoomNumber] = useState(getGuestInfo().room);
   const [viewMode, setViewMode] = useState<'mobile' | 'desktop'>(getViewMode());
 
+  // Filter menus based on connected menus for food ordering
+  const filteredMenus = useMemo(() => {
+    if (connectedMenus.length === 0) {
+      return menus; // No filtering if no connected menus specified
+    }
+    return menus.filter(menu => {
+      // Map from display names to connected menu IDs (breakfast -> Breakfast menu, etc.)
+      const menuId = menu.name.toLowerCase().replace(' menu', '');
+      return connectedMenus.includes(menuId);
+    });
+  }, [menus, connectedMenus]);
+
   // Initialize with the first available menu or saved menu
-  const menuNames = useMemo(() => menus.map(menu => menu.name), [menus]);
+  const menuNames = useMemo(() => filteredMenus.map(menu => menu.name), [filteredMenus]);
   const [selectedMenuName, setSelectedMenuName] = useState(() => {
-    // Use saved menu if it exists in the current menu list, otherwise use default
+    // For connected menus (food ordering), prioritize availability logic
+    if (connectedMenus.length > 0) {
+      // Use the first available menu from connected menus
+      const defaultFromConnected = getDefaultMenu(menuNames, demoDay, demoHour, demoMinute, demoAmPm);
+      if (defaultFromConnected && menuNames.includes(defaultFromConnected)) {
+        return defaultFromConnected;
+      }
+      // Fallback to first connected menu
+      return menuNames[0] || menuName;
+    }
+    
+    // Original logic for regular menu browsing
     if (savedData.selectedMenu && menuNames.includes(savedData.selectedMenu)) {
       return savedData.selectedMenu;
     }
@@ -616,8 +641,8 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
   
-  // Convert menus to select options format with availability info
-  const menuOptions = menus.map(menu => {
+  // Convert filtered menus to select options format with availability info
+  const menuOptions = filteredMenus.map(menu => {
     const availabilityInfo = getMenuAvailabilityInfo(menu.name, demoDay, demoHour, demoMinute, demoAmPm);
     return {
       label: menu.name,
@@ -629,7 +654,7 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
   });
 
   // Get current selected menu and its sections
-  const currentMenu = menus.find(menu => menu.name === selectedMenuName);
+  const currentMenu = filteredMenus.find(menu => menu.name === selectedMenuName);
   const menuSections = currentMenu?.sections || [];
 
   // Check if current menu is available
@@ -771,7 +796,7 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
     
     // Update previous availability states
     setPreviousMenuAvailabilities(updatedAvailabilities);
-  }, [demoDay, demoHour, demoMinute, demoAmPm, menus, previousMenuAvailabilities, cart, onUpdateQuantity]);
+  }, [demoDay, demoHour, demoMinute, demoAmPm, menus, previousMenuAvailabilities, onUpdateQuantity]);
 
   const handleMenuSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const newMenuName = event.target.value;

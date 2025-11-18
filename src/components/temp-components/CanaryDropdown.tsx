@@ -53,7 +53,7 @@ export default function CanaryDropdown({
   };
 
   return (
-    <div className={`relative inline-block ${className}`} ref={dropdownRef}>
+    <div className={`relative ${className || 'inline-block'}`} ref={dropdownRef}>
       {/* Trigger */}
       <div
         onClick={() => setIsOpen(!isOpen)}
@@ -65,34 +65,37 @@ export default function CanaryDropdown({
       {/* Dropdown Menu */}
       {isOpen && (
         <div
-          className={`absolute top-full mt-1 w-48 bg-white border rounded-md shadow-lg z-50 ${
+          className={`absolute top-full mt-1 bg-white rounded overflow-hidden z-50 ${
             align === 'right' ? 'right-0' : 'left-0'
           }`}
           style={{
-            borderColor: colors.colorBlack6,
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+            width: '100%',
+            minWidth: '200px',
+            borderRadius: '4px',
+            boxShadow: '0px 8px 24px 0px rgba(0,0,0,0.16)'
           }}
         >
-          <div className="py-1">
-            {items.map((item, index) => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  item.onClick();
-                  setIsOpen(false);
-                }}
-                className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-gray-50 transition-colors font-roboto text-[14px] font-normal"
-                style={{ color: getItemTextColor(item.variant) }}
-              >
-                {item.icon && (
-                  <span className="w-4 h-4 flex items-center justify-center">
-                    {item.icon}
-                  </span>
-                )}
-                {item.label}
-              </button>
-            ))}
-          </div>
+          {items.map((item, index) => (
+            <button
+              key={item.id}
+              onClick={() => {
+                item.onClick();
+                setIsOpen(false);
+              }}
+              className="w-full px-2 py-2 text-left flex items-center gap-2.5 hover:bg-gray-50 transition-colors font-roboto text-[14px] font-normal bg-white"
+              style={{ 
+                color: getItemTextColor(item.variant),
+                lineHeight: '22px'
+              }}
+            >
+              {item.icon && (
+                <span className="w-4 h-4 flex items-center justify-center">
+                  {item.icon}
+                </span>
+              )}
+              {item.label}
+            </button>
+          ))}
         </div>
       )}
     </div>
