@@ -6,7 +6,6 @@ import { ButtonType, ButtonSize, ButtonColor } from './temp-components/button-ty
 import { colors } from './temp-components/design-tokens';
 import CanaryTag, { TagColor, TagVariant, TagSize } from './temp-components/CanaryTag';
 import CanaryDropdown from './temp-components/CanaryDropdown';
-
 // Types for orders
 interface Order {
   id: string;
