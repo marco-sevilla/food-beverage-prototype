@@ -42,26 +42,32 @@ This prototype demonstrates a complete F&B ordering ecosystem with:
 ```
 src/
 ├── components/
-│   ├── AppRouter.tsx              # Central routing and state management
-│   ├── MenuManagementPage.tsx     # Menu & item library management
-│   ├── EditItemPage.tsx          # Item editing with mobile preview
-│   ├── EditMenuPage.tsx          # Menu configuration interface
-│   ├── CreateItemModal.tsx       # New item creation modal
-│   ├── DeleteItemModal.tsx       # Item deletion confirmation
-│   ├── AnimatedModal.tsx         # Reusable modal with animations
-│   ├── OrderManagementPage.tsx   # Staff order processing
-│   ├── MobileMenuOrdering.tsx    # Guest mobile ordering
-│   ├── OrderDetailsSideSheet.tsx # Order details with actions
-│   ├── EmailPreview.tsx          # Order email templates
-│   └── PageTransition.tsx        # Animation components
+│   ├── AppRouter.tsx                    # Central routing and state management
+│   ├── MenuManagementPage.tsx           # Menu & item library management
+│   ├── EditItemPage.tsx                # Item editing with mobile preview
+│   ├── EditMenuPage.tsx                # Menu configuration interface
+│   ├── CreateItemModal.tsx             # New item creation modal
+│   ├── DeleteItemModal.tsx             # Item deletion confirmation
+│   ├── AnimatedModal.tsx               # Reusable modal with animations
+│   ├── OrderManagementPage.tsx         # Staff order processing
+│   ├── MobileMenuOrdering.tsx          # Guest mobile ordering
+│   ├── OrderDetailsSideSheet.tsx       # Order details with actions
+│   ├── EmailPreview.tsx                # Order email templates
+│   ├── CompendiumPage.tsx              # Guest content management system
+│   ├── EditCompendiumItemPage.tsx      # Compendium item editing with preview
+│   ├── GuestHubPage.tsx                # Guest experience homepage
+│   ├── GuestItemDetailsPage.tsx        # Individual guest item details
+│   ├── GuestHubMobilePreview.tsx       # Mobile preview for guest hub
+│   ├── GuestItemDetailsMobilePreview.tsx # Mobile preview for item details
+│   └── PageTransition.tsx              # Animation components
 ├── data/
-│   └── foodItems.ts              # Centralized item data
+│   └── foodItems.ts                    # Centralized item data
 ├── utils/
-│   ├── persistence.ts            # localStorage management
-│   ├── menuAvailability.ts       # Time-based menu controls
-│   └── orderStorage.ts           # Order data persistence
+│   ├── persistence.ts                  # localStorage management (includes compendium)
+│   ├── menuAvailability.ts             # Time-based menu controls
+│   └── orderStorage.ts                 # Order data persistence
 └── lib/
-    └── design-tokens.ts          # Design system tokens
+    └── design-tokens.ts                # Design system tokens
 ```
 
 ## 🛠️ Key Features
@@ -86,7 +92,15 @@ src/
 - **Menu Availability**: Time-based menu display with automatic updates
 - **Order Confirmation**: Professional receipt and status tracking
 
-### 4. **Visual & Animation System**
+### 4. **Guest Content Management (Compendium Builder)**
+- **Section Management**: Organize guest content into logical categories
+- **Item Creation**: Rich item editing with images, descriptions, and contact information
+- **Action Buttons**: Configurable buttons for food ordering, calling, emailing, or linking
+- **Real-time Preview**: Live mobile preview showing guest experience
+- **Image Compression**: Automatic image optimization to prevent storage issues
+- **Navigation Flow**: Complete guest journey from hub to item details to food ordering
+
+### 5. **Visual & Animation System**
 - **Page Transitions**: Smooth blur/fade transitions between views
 - **Progressive Loading**: Staggered element animations for polished UX
 - **Modal Animations**: Sophisticated open/close animations with backdrop blur
@@ -143,8 +157,9 @@ npm run dev
 ### Development Workflow
 1. **Order Management**: Access via main dashboard for order processing
 2. **Menu Configuration**: Navigate to Menu Management for item/menu setup
-3. **Mobile Testing**: Use "Go to ordering flow" for guest experience testing
-4. **Settings**: Configure prep times and availability in Menu Management > Settings
+3. **Guest Content**: Use Compendium Builder to create and manage guest-facing content
+4. **Mobile Testing**: Use "Go to ordering flow" for guest experience testing
+5. **Settings**: Configure prep times and availability in Menu Management > Settings
 
 ## 📊 Data Persistence
 
@@ -159,9 +174,34 @@ npm run dev
 - **Error Recovery**: Graceful handling of missing or corrupted data
 - **Migration Support**: Backwards-compatible data structure evolution
 
-## 🔄 Recent Updates (Current Session)
+## 🔄 Recent Updates (Latest Session)
 
-### Item Management Enhancements
+### 🏗️ Guest Experience & Compendium Builder
+- ✅ **Compendium Builder**: Complete guest content management system with sections and items
+- ✅ **Photo Upload System**: Image upload with compression (max 800px, JPEG 80% quality) for compendium items
+- ✅ **Guest Hub Interface**: Dynamic mobile guest experience with logo and personalized content
+- ✅ **Mobile Preview Components**: Real-time preview of guest experience in 370px×740px mobile frames
+- ✅ **Item Details Pages**: Comprehensive item display with contact information and action buttons
+
+### 🔧 Critical Bug Fixes
+- ✅ **Import Path Resolution**: Fixed `CanaryInput` and `CanarySegmentedControl` import errors
+- ✅ **Navigation State Management**: Implemented proper back navigation from guest ordering to item details
+- ✅ **Infinite Re-render Fix**: Resolved "Maximum update depth exceeded" error in menu ordering
+- ✅ **Image Persistence**: Fixed localStorage quota issues with automatic image compression
+
+### 🎨 UI/UX Enhancements
+- ✅ **Statler Logo Integration**: Replaced placeholder text with actual hotel logo (`/statler logo.png`)
+- ✅ **Figma-Based Spacing**: Reduced spacing in guest item details page to match design specifications
+- ✅ **Mobile Preview Resize**: Updated all mobile previews from 320px to 370px width with proportional scaling
+- ✅ **Action Button Integration**: Full food ordering flow with menu connections and special requests
+
+### 🗄️ Data Architecture Improvements
+- ✅ **Compendium Data Structure**: New persistence layer for guest content with sections and items
+- ✅ **Navigation Context Tracking**: Source item tracking for proper back navigation flow
+- ✅ **Enhanced Error Handling**: Better localStorage quota management and compression fallbacks
+- ✅ **State Synchronization**: Real-time updates between compendium builder and guest preview
+
+### Previous Session Features
 - ✅ **Create New Item Flow**: Modal-based creation with navigation to edit page
 - ✅ **Item Deletion System**: Confirmation modal with complete cleanup
 - ✅ **Internal/External Names**: Dual naming with auto-sync functionality
@@ -169,13 +209,6 @@ npm run dev
 - ✅ **Page Transitions**: Professional animations for navigation
 - ✅ **Mobile Image Resize**: Optimized header image sizing (230px height)
 - ✅ **High-Quality Images**: Upgraded from 40x40 to 800x600 with optimization
-
-### Technical Improvements
-- ✅ **Error Handling**: Null-safe formatMenuDisplay for undefined arrays
-- ✅ **State Management**: Enhanced item loading with proper fallbacks
-- ✅ **Animation System**: Consistent progressive fade-in across all pages
-- ✅ **Data Integrity**: Proper property initialization for loaded items
-- ✅ **Performance**: Optimized re-rendering with dependency management
 
 ## 🔮 Future Roadmap
 

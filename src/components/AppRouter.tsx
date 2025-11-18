@@ -12,11 +12,15 @@ import { OrderConfirmation } from './OrderConfirmation';
 import { EditSectionPage } from './EditSectionPage';
 import { MenuAvailabilityPage } from './MenuAvailabilityPage';
 import { OrderManagementPage } from './OrderManagementPage';
+import { CompendiumPage } from './CompendiumPage';
+import { EditCompendiumSectionPage } from './EditCompendiumSectionPage';
+import { EditCompendiumItemPage } from './EditCompendiumItemPage';
+import { GuestHubPage } from './GuestHubPage';
 import { EmailPreview } from './EmailPreview';
 import { DenialEmailPreview } from './DenialEmailPreview';
 import { Toast } from './Toast';
 import { FOOD_ITEMS, convertToSectionItem, getFoodItemsByMenu, type FoodItem as CentralizedFoodItem } from '@/data/foodItems';
-import { loadData, saveMenuData, saveMenuAvailability as persistMenuAvailability, savePrepTime } from '@/utils/persistence';
+import { loadData, saveMenuData, saveMenuAvailability as persistMenuAvailability, savePrepTime, createCompendiumItem, getCompendiumSection, saveCompendiumItem as persistCompendiumItem, CompendiumItem } from '@/utils/persistence';
 import { AnimatePresence } from 'framer-motion';
 
 // OrderDetails interface for email preview
@@ -43,7 +47,7 @@ interface OrderDetails {
   status: string;
 }
 
-type Page = 'order-management' | 'menu-management' | 'edit-menu' | 'edit-item' | 'edit-section' | 'menu-availability' | 'mobile-preview' | 'mobile-menu-ordering' | 'menu-preview' | 'order-summary' | 'order-loading' | 'order-confirmation' | 'email-preview' | 'denial-email-preview';
+type Page = 'order-management' | 'menu-management' | 'edit-menu' | 'edit-item' | 'edit-section' | 'menu-availability' | 'mobile-preview' | 'mobile-menu-ordering' | 'menu-preview' | 'order-summary' | 'order-loading' | 'order-confirmation' | 'email-preview' | 'denial-email-preview' | 'compendium' | 'edit-compendium-section' | 'edit-compendium-item' | 'guest-hub';
 
 interface MenuItem {
   name: string; // This will be the external_name for backward compatibility
@@ -89,6 +93,14 @@ interface AppState {
   previewingMenu?: MenuWithSections;
   editingItem?: FoodItem;
   editingSection?: MenuSection;
+  editingCompendiumSection?: string; // Section name for compendium editing
+  editingCompendiumItem?: {
+    itemName: string;
+    sectionName: string;
+    sectionId: string;
+    itemId?: string;
+  };
+  compendiumRefreshKey?: number; // Used to force refresh of compendium section page
   menus: MenuWithSections[];
   cart: Record<string, { item: SectionItem; quantity: number; specialRequests: string }>;
   activeManagementTab: 'menus' | 'item-library' | 'settings';
@@ -100,6 +112,9 @@ interface AppState {
     denialComment?: string;
   };
   prepTimeMinutes: number;
+  connectedMenusForOrdering?: string[]; // Connected menus for food ordering navigation
+  orderingContext?: 'guest-hub' | 'menu-management'; // Track where ordering flow originated
+  sourceGuestItem?: CompendiumItem; // Track which guest item the user came from when navigating to food ordering
   toast: {
     isVisible: boolean;
     message: string;
@@ -310,7 +325,111 @@ export const AppRouter: React.FC = () => {
   };
 
   const navigateToMenuManagement = () => {
-    transitionToPage('menu-management');
+    // Direct navigation without animation for sidebar navigation
+    setAppState(prev => ({
+      ...prev,
+      currentPage: 'menu-management'
+    }));
+  };
+
+  const navigateToCompendium = () => {
+    // Direct navigation without animation for sidebar navigation
+    setAppState(prev => ({
+      ...prev,
+      currentPage: 'compendium'
+    }));
+  };
+
+  const navigateToGuestHub = () => {
+    transitionToPage('guest-hub');
+  };
+
+  const navigateBackToGuestItemDetails = () => {
+    // This will navigate back to guest hub with the source item selected
+    // The GuestHubPage will show the item details if sourceGuestItem is set
+    // Don't clear sourceGuestItem here since we want to pass it to GuestHubPage
+    transitionToPage('guest-hub');
+  };
+
+  const clearSourceItem = () => {
+    setAppState(prev => ({
+      ...prev,
+      sourceGuestItem: undefined
+    }));
+  };
+
+  const navigateToFoodOrdering = (connectedMenus: string[], sourceItem?: CompendiumItem) => {
+    setAppState(prev => ({
+      ...prev,
+      connectedMenusForOrdering: connectedMenus,
+      orderingContext: 'guest-hub',
+      sourceGuestItem: sourceItem
+    }));
+    transitionToPage('mobile-menu-ordering');
+  };
+
+  const navigateToEditCompendiumSection = (sectionName: string) => {
+    setAppState(prev => ({
+      ...prev,
+      currentPage: 'edit-compendium-section',
+      editingCompendiumSection: sectionName
+    }));
+  };
+
+  const navigateBackToCompendium = () => {
+    setAppState(prev => ({
+      ...prev,
+      currentPage: 'compendium',
+      editingCompendiumSection: undefined
+    }));
+  };
+
+  const navigateToEditCompendiumItem = (itemName: string, sectionName: string, sectionId: string, itemId?: string) => {
+    setAppState(prev => ({
+      ...prev,
+      currentPage: 'edit-compendium-item',
+      editingCompendiumItem: {
+        itemName,
+        sectionName,
+        sectionId,
+        itemId // Add itemId to track existing items
+      }
+    }));
+  };
+
+  const navigateBackToEditCompendiumSection = () => {
+    setAppState(prev => ({
+      ...prev,
+      currentPage: 'edit-compendium-section',
+      editingCompendiumItem: undefined,
+      compendiumRefreshKey: Date.now() // Force refresh of section page
+    }));
+  };
+
+  const saveCompendiumItem = (item: CompendiumItem) => {
+    const editingItem = appState.editingCompendiumItem;
+    if (!editingItem) return;
+
+    // Set the correct sectionId and save the item
+    const itemToSave = {
+      ...item,
+      sectionId: editingItem.sectionId
+    };
+    persistCompendiumItem(itemToSave);
+    
+    // Show success message
+    showToast('Item saved successfully', 'success');
+    
+    // Update the editing item state to include the saved item ID for future edits
+    setAppState(prev => ({
+      ...prev,
+      editingCompendiumItem: {
+        ...prev.editingCompendiumItem!,
+        itemId: itemToSave.id
+      }
+    }));
+    
+    // Don't navigate - stay on the edit page
   };
 
   const navigateToMenuManagementWithTab = (tab: 'menus' | 'item-library' | 'settings') => {
@@ -389,11 +508,19 @@ export const AppRouter: React.FC = () => {
   };
 
   const closeOrderFlow = () => {
-    setAppState(prev => ({
-      ...prev,
-      currentPage: 'mobile-menu-ordering',
-      cart: {} // Clear the cart after order completion
-    }));
+    setAppState(prev => {
+      // Navigate based on ordering context
+      const targetPage = prev.orderingContext === 'guest-hub' ? 'guest-hub' : 'mobile-menu-ordering';
+      
+      return {
+        ...prev,
+        currentPage: targetPage,
+        cart: {}, // Clear the cart after order completion
+        // Clear ordering context and connected menus after order completion
+        orderingContext: undefined,
+        connectedMenusForOrdering: undefined
+      };
+    });
   };
 
   // Helper function to generate cart key
@@ -899,10 +1026,13 @@ export const AppRouter: React.FC = () => {
             menuName={appState.previewingMenu?.name}
             menus={appState.menus}
             cart={getLegacyCart()}
-            onBack={navigateBackToMobilePreview}
+            onBack={appState.connectedMenusForOrdering ? 
+              (appState.sourceGuestItem ? navigateBackToGuestItemDetails : navigateToGuestHub) : 
+              navigateBackToMobilePreview}
             onViewCart={navigateToOrderSummary}
             onUpdateQuantity={handleUpdateQuantity}
             onAddItemToCart={addItemToCart}
+            connectedMenus={appState.connectedMenusForOrdering}
           />
           <Toast
             message={appState.toast.message}
@@ -965,7 +1095,11 @@ export const AppRouter: React.FC = () => {
       return renderPage(
         <MobileGuestExperience
           onBack={navigateToMenuManagement}
-          onOrderClick={() => setAppState(prev => ({ ...prev, currentPage: 'mobile-menu-ordering' }))}
+          onOrderClick={() => setAppState(prev => ({ 
+            ...prev, 
+            currentPage: 'mobile-menu-ordering',
+            orderingContext: 'menu-management'
+          }))}
         />
       );
     case 'edit-menu':
@@ -991,6 +1125,48 @@ export const AppRouter: React.FC = () => {
           />
         </>
       );
+    case 'compendium':
+      return renderPage(
+        <CompendiumPage
+          onBack={navigateToOrderManagement}
+          onNavigateToMenuManagement={navigateToMenuManagement}
+          onEditSection={navigateToEditCompendiumSection}
+          onNavigateToGuestHub={navigateToGuestHub}
+        />
+      );
+    case 'edit-compendium-section':
+      return renderPage(
+        <EditCompendiumSectionPage
+          key={appState.compendiumRefreshKey}
+          sectionName={appState.editingCompendiumSection || 'Untitled Section'}
+          onBack={navigateBackToCompendium}
+          onNavigateToMenuManagement={navigateToMenuManagement}
+          onEditItem={navigateToEditCompendiumItem}
+          onNavigateToGuestHub={navigateToGuestHub}
+        />
+      );
+    case 'edit-compendium-item':
+      return renderPage(
+        <EditCompendiumItemPage
+          itemName={appState.editingCompendiumItem?.itemName || 'Untitled Item'}
+          sectionName={appState.editingCompendiumItem?.sectionName || 'Unknown Section'}
+          sectionId={appState.editingCompendiumItem?.sectionId || ''}
+          itemId={appState.editingCompendiumItem?.itemId}
+          onBack={navigateBackToEditCompendiumSection}
+          onNavigateToMenuManagement={navigateToMenuManagement}
+          onSave={saveCompendiumItem}
+          onNavigateToGuestHub={navigateToGuestHub}
+        />
+      );
+    case 'guest-hub':
+      return renderPage(
+        <GuestHubPage
+          onBack={navigateToCompendium}
+          onNavigateToFoodOrdering={navigateToFoodOrdering}
+          initialSelectedItem={appState.sourceGuestItem}
+          onClearSourceItem={clearSourceItem}
+        />
+      );
     case 'menu-management':
     default:
       return renderPage(
@@ -1006,6 +1182,7 @@ export const AppRouter: React.FC = () => {
           initialActiveTab={appState.activeManagementTab}
           onGoToOrdering={navigateToMobileMenuOrdering}
           onBackToOrders={navigateToOrderManagement}
+          onCompendium={navigateToCompendium}
           prepTimeMinutes={appState.prepTimeMinutes}
           onUpdatePrepTime={updatePrepTime}
         />
