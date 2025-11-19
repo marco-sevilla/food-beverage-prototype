@@ -5,7 +5,7 @@ import Icon from '@mdi/react';
 import clsx from 'clsx';
 import { colors, spacing } from '@/lib/design-tokens';
 import CanarySwitch from './temp-components/CanarySwitch';
-import CanaryCheckbox from '../../../components/canary-ui/forms/CanaryCheckbox';
+import CanaryCheckbox from './temp-components/CanaryCheckbox';
 import { AnimatedSection } from './PageTransition';
 import { CreateMenuModal } from './CreateMenuModal';
 import { CreateItemModal } from './CreateItemModal';
@@ -124,9 +124,8 @@ const MenuItem: React.FC<MenuItemProps> = ({
     {/* Checkbox Column */}
     <div className="w-8 flex items-center justify-center shrink-0">
       <CanaryCheckbox
-        size="normal"
         checked={isSelected}
-        onChange={(e) => onSelect?.(e.target.checked)}
+        onChange={(checked) => onSelect?.(checked)}
       />
     </div>
     
@@ -199,9 +198,8 @@ const FoodItem: React.FC<FoodItemProps> = ({
     {/* Checkbox Column */}
     <div className="w-8 flex items-center justify-center shrink-0">
       <CanaryCheckbox
-        size="normal"
         checked={isSelected}
-        onChange={(e) => onSelect?.(id, e.target.checked)}
+        onChange={(checked) => onSelect?.(id, checked)}
       />
     </div>
     
@@ -259,7 +257,7 @@ const FoodItem: React.FC<FoodItemProps> = ({
 interface MenuManagementPageProps {
   menus: Array<{ name: string; entryPoint: string; isNew?: boolean }>;
   onEditMenu?: (menuName: string, entryPoint: string) => void;
-  onCreateMenu?: (menuName: string, parsedMenu?: any) => void;
+  onCreateMenu?: (menuName: string) => void;
   onDeleteMenu?: (menuName: string) => void;
   onPreviewMenu?: (menuName: string) => void;
   onEditItem?: (itemId: string) => void;
@@ -439,9 +437,9 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
   }, []);
 
 
-  const handleCreateMenu = async (menuName: string, parsedMenu?: any) => {
+  const handleCreateMenu = async (menuName: string) => {
     if (onCreateMenu) {
-      await onCreateMenu(menuName, parsedMenu);
+      await onCreateMenu(menuName);
     }
     setIsCreateModalOpen(false);
   };
