@@ -33,8 +33,8 @@ import {
 
 // Import the CanarySidebar component
 import CanarySidebar, { SidebarVariant, type SidebarSection, type SidebarNavigationItem } from './CanarySidebar';
-import CanaryInput from '../../temp-components/CanaryInput';
-import { InputType, InputSize } from '../../temp-components/types';
+import CanaryInput from './temp-components/CanaryInput';
+import { InputType, InputSize } from './temp-components/types';
 
 
 // Button component

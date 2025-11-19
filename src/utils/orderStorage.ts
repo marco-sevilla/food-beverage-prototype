@@ -33,7 +33,7 @@ interface Order {
   roomNumber: string;
   items: string[];
   total: number;
-  status: 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
+  status: 'pending' | 'accepted' | 'cancelled';
   orderTime: string;
   deliveryTime?: string;
   notes?: string;
@@ -187,7 +187,7 @@ export const loadOrderDetails = (): Record<string, OrderDetails> => {
 };
 
 // Update order status (works for both localStorage and mock orders)
-export const updateOrderStatus = (orderId: string, newStatus: 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled', allOrders: any[] = [], allOrderDetails: Record<string, any> = {}): { updatedOrders: any[], updatedOrderDetails: Record<string, any> } => {
+export const updateOrderStatus = (orderId: string, newStatus: 'pending' | 'accepted' | 'cancelled', allOrders: any[] = [], allOrderDetails: Record<string, any> = {}): { updatedOrders: any[], updatedOrderDetails: Record<string, any> } => {
   console.log('updateOrderStatus called with:', { orderId, newStatus, allOrdersCount: allOrders.length });
   
   if (typeof window === 'undefined') return { updatedOrders: allOrders, updatedOrderDetails: allOrderDetails };

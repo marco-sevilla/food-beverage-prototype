@@ -297,7 +297,7 @@ export const EditMenuPage: React.FC<EditMenuPageProps> = ({
   const [internalMenuName, setInternalMenuName] = useState(internalName || menuName);
   const [externalMenuName, setExternalMenuName] = useState(externalName || menuName);
   const [localSections, setLocalSections] = useState(
-    isNewMenu ? [] : (sections || []).map(section => ({
+    (sections || []).map(section => ({
       id: section.id,
       title: section.title,
       subtitle: `${section.items.length} item${section.items.length !== 1 ? 's' : ''}`,
@@ -305,6 +305,20 @@ export const EditMenuPage: React.FC<EditMenuPageProps> = ({
     }))
   );
   const [isCreateSectionModalOpen, setIsCreateSectionModalOpen] = useState(false);
+  
+  // Update localSections when sections prop changes (important for newly created menus)
+  useEffect(() => {
+    if (sections && sections.length > 0) {
+      console.log('🔄 EditMenuPage: Updating localSections from sections prop:', sections);
+      setLocalSections(sections.map(section => ({
+        id: section.id,
+        title: section.title,
+        subtitle: `${section.items.length} item${section.items.length !== 1 ? 's' : ''}`,
+        enabled: true
+      })));
+      console.log('✅ EditMenuPage: localSections updated with', sections.length, 'sections');
+    }
+  }, [sections]);
   
   // Drag and drop state
   const [activeId, setActiveId] = useState<string | null>(null);

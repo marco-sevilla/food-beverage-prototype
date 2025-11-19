@@ -64,6 +64,7 @@ src/
 │   └── foodItems.ts                    # Centralized item data
 ├── utils/
 │   ├── persistence.ts                  # localStorage management (includes compendium)
+│   ├── claudeMenuParser.ts             # AI-powered menu parsing with Claude API
 │   ├── menuAvailability.ts             # Time-based menu controls
 │   └── orderStorage.ts                 # Order data persistence
 └── lib/
@@ -72,12 +73,15 @@ src/
 
 ## 🛠️ Key Features
 
-### 1. **Advanced Menu Management**
-- **Item Library**: Centralized item management with availability toggles
-- **Menu Configuration**: Drag-and-drop menu building with section organization
+### 1. **AI-Powered Menu Management**
+- **Intelligent Menu Parsing**: Upload menu images (PDF, JPG, PNG, WebP) and automatically extract items with names, descriptions, and prices using Claude AI
+- **Smart Section Detection**: Advanced algorithm that avoids over-segmentation and groups items contextually into logical sections (Mains, Desserts, Sides, etc.)
+- **AI Field Indicators**: Visual star icons show which fields were AI-filled, disappearing when manually edited
+- **Bulk Operations**: Multi-select functionality for efficient menu and item management with floating action buttons
+- **Item Library**: Centralized item management with availability toggles and advanced filtering
+- **Menu Configuration**: Drag-and-drop menu building with intelligent section organization
 - **Dual Naming System**: Separate internal/external names for operational clarity
-- **Image Management**: High-quality image upload with mobile optimization
-- **Real-time Persistence**: All changes automatically saved to localStorage
+- **Image Management**: High-quality image upload with mobile optimization and automatic compression
 
 ### 2. **Professional Order Processing**
 - **Dynamic Priority System**: Color-coded time thresholds based on prep time settings
@@ -108,6 +112,17 @@ src/
 
 ## ⚙️ Configuration
 
+### AI Menu Parsing Setup
+- **Anthropic API Key**: Required for Claude AI menu parsing functionality
+- **Supported Formats**: PDF, JPG, PNG, WebP images up to 10MB
+- **Extraction Capabilities**: 
+  - Item names (cleaned of price symbols)
+  - Item descriptions (ingredients, preparation details)
+  - Prices (converted to numerical values from various formats)
+  - Smart section grouping (2-5 logical sections typically)
+- **Post-Processing**: Automatic consolidation of over-segmented sections
+- **Fallback Handling**: Graceful error recovery with detailed error messages
+
 ### Order Management Settings
 - **Prep Time Configuration**: 15-60 minute options affecting color thresholds
 - **Time Threshold System**:
@@ -123,11 +138,14 @@ src/
 ## 🎨 Design System
 
 ### Component Library Integration
+- **CanaryInput**: Enhanced input components with AI-filled state indicators and error handling
+- **CanaryCheckbox**: Multi-select functionality for bulk operations with proper sizing
 - **CanaryButton**: Consistent button styling across interfaces
 - **CanarySelect**: Professional dropdown components
 - **CanaryTag**: Dynamic color system for status indicators
 - **CanaryChip**: Selection components for forms
-- **CanaryModal**: Standardized modal presentations
+- **CanaryModal**: Standardized modal presentations with animation support
+- **AI Star Icon**: Custom gradient star indicator for AI-filled fields (`/AI star.svg`)
 
 ### Animation Standards
 - **Page Transitions**: 400ms blur → fade timing
@@ -156,10 +174,19 @@ npm run dev
 
 ### Development Workflow
 1. **Order Management**: Access via main dashboard for order processing
-2. **Menu Configuration**: Navigate to Menu Management for item/menu setup
-3. **Guest Content**: Use Compendium Builder to create and manage guest-facing content
-4. **Mobile Testing**: Use "Go to ordering flow" for guest experience testing
-5. **Settings**: Configure prep times and availability in Menu Management > Settings
+2. **AI Menu Parsing**: Upload menu images in Menu Management → "Create menu" → AI parsing flow
+3. **Menu Configuration**: Navigate to Menu Management for item/menu setup with bulk operations
+4. **Item Editing**: Edit AI-parsed items with visual indicators showing AI-filled fields
+5. **Guest Content**: Use Compendium Builder to create and manage guest-facing content
+6. **Mobile Testing**: Use "Go to ordering flow" for guest experience testing
+7. **Settings**: Configure prep times and availability in Menu Management > Settings
+
+### AI Setup Process
+1. **API Key Configuration**: First-time users will see API key setup modal for Claude integration
+2. **Menu Upload**: Drag and drop or click to upload menu files (PDF, JPG, PNG, WebP)
+3. **AI Processing**: Claude analyzes the menu and extracts structured data
+4. **Review & Edit**: Items appear in Item Library with AI star indicators on parsed fields
+5. **Customization**: Modify AI-filled content as needed (stars disappear on edit)
 
 ## 📊 Data Persistence
 
@@ -176,6 +203,26 @@ npm run dev
 
 ## 🔄 Recent Updates (Latest Session)
 
+### 🤖 AI-Powered Menu Management
+- ✅ **Intelligent Menu Parsing**: Claude AI integration for automatic menu extraction from uploaded images (PDF, JPG, PNG, WebP)
+- ✅ **Enhanced Data Extraction**: Automatically extracts item names, descriptions, and prices with high accuracy
+- ✅ **Smart Section Recognition**: Improved algorithm that avoids creating duplicate sections and groups items contextually
+- ✅ **Post-Processing Optimization**: Intelligent consolidation of over-segmented sections into logical groups (Mains, Desserts, Sides, Beverages)
+- ✅ **API Key Management**: Secure Anthropic API key storage with modal-based setup for Claude integration
+
+### 🌟 AI-Filled Input States
+- ✅ **Visual AI Indicators**: Colorful gradient star icons appear next to AI-filled text fields in item editing
+- ✅ **Smart Field Detection**: Automatically detects items created from AI parsing (based on "parsed-" ID prefix)
+- ✅ **Interactive Behavior**: Star icons disappear when users modify AI-filled content
+- ✅ **Component Integration**: Enhanced CanaryInput and Textarea components with AI-filled state support
+- ✅ **Design System Compliance**: Follows Figma design specifications with proper spacing and positioning
+
+### 📊 Bulk Operations & Table Management
+- ✅ **Bulk Delete Functionality**: Multi-select checkboxes for menus and items with floating delete button
+- ✅ **Table Layout Improvements**: Fixed column alignment issues across Menu Management and Item Library tables
+- ✅ **Selection State Management**: Efficient Set-based selection tracking with automatic cleanup when switching tabs
+- ✅ **Visual Feedback**: Persistent floating action buttons with dynamic text based on selection count
+
 ### 🏗️ Guest Experience & Compendium Builder
 - ✅ **Compendium Builder**: Complete guest content management system with sections and items
 - ✅ **Photo Upload System**: Image upload with compression (max 800px, JPEG 80% quality) for compendium items
@@ -183,23 +230,19 @@ npm run dev
 - ✅ **Mobile Preview Components**: Real-time preview of guest experience in 370px×740px mobile frames
 - ✅ **Item Details Pages**: Comprehensive item display with contact information and action buttons
 
-### 🔧 Critical Bug Fixes
+### 🔧 Critical Bug Fixes & Infrastructure
 - ✅ **Import Path Resolution**: Fixed `CanaryInput` and `CanarySegmentedControl` import errors
 - ✅ **Navigation State Management**: Implemented proper back navigation from guest ordering to item details
 - ✅ **Infinite Re-render Fix**: Resolved "Maximum update depth exceeded" error in menu ordering
 - ✅ **Image Persistence**: Fixed localStorage quota issues with automatic image compression
+- ✅ **Column Alignment**: Resolved table layout issues with proper fixed-width column structure
 
-### 🎨 UI/UX Enhancements
+### 🎨 Enhanced UI/UX Components
+- ✅ **AI Star Icon Integration**: Custom SVG star with gradient colors for AI-filled field indicators
+- ✅ **Table Header Alignment**: Synchronized column headers with content for perfect visual alignment
+- ✅ **Responsive Design**: Enhanced input padding logic for multiple right-side icons (error, AI star, custom addons)
 - ✅ **Statler Logo Integration**: Replaced placeholder text with actual hotel logo (`/statler logo.png`)
-- ✅ **Figma-Based Spacing**: Reduced spacing in guest item details page to match design specifications
 - ✅ **Mobile Preview Resize**: Updated all mobile previews from 320px to 370px width with proportional scaling
-- ✅ **Action Button Integration**: Full food ordering flow with menu connections and special requests
-
-### 🗄️ Data Architecture Improvements
-- ✅ **Compendium Data Structure**: New persistence layer for guest content with sections and items
-- ✅ **Navigation Context Tracking**: Source item tracking for proper back navigation flow
-- ✅ **Enhanced Error Handling**: Better localStorage quota management and compression fallbacks
-- ✅ **State Synchronization**: Real-time updates between compendium builder and guest preview
 
 ### Previous Session Features
 - ✅ **Create New Item Flow**: Modal-based creation with navigation to edit page

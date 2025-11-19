@@ -22,6 +22,8 @@ import { Toast } from './Toast';
 import { FOOD_ITEMS, convertToSectionItem, getFoodItemsByMenu, type FoodItem as CentralizedFoodItem } from '@/data/foodItems';
 import { loadData, saveMenuData, saveMenuAvailability as persistMenuAvailability, savePrepTime, createCompendiumItem, getCompendiumSection, saveCompendiumItem as persistCompendiumItem, CompendiumItem } from '@/utils/persistence';
 import { AnimatePresence } from 'framer-motion';
+import { runMenuParserTest } from '../utils/menuParser';
+import { ParsedMenu } from '../utils/claudeMenuParser';
 
 // OrderDetails interface for email preview
 interface OrderDetails {
@@ -130,6 +132,12 @@ interface AppState {
 }
 
 export const AppRouter: React.FC = () => {
+  // Add test function to global scope for console access
+  useEffect(() => {
+    (window as any).testMenuParser = runMenuParserTest;
+    console.log('🧪 Menu Parser Test v2.0 Available: Run testMenuParser() in console');
+  }, []);
+
   // Initialize menus with actual section data from centralized food items
   const getBreakfastItems = () => getFoodItemsByMenu('Breakfast').map(convertToSectionItem);
   const getLunchItems = () => getFoodItemsByMenu('Lunch').map(convertToSectionItem);
@@ -756,21 +764,114 @@ export const AppRouter: React.FC = () => {
     }));
   };
 
-  const createNewMenu = (menuName: string) => {
-    const newMenu: MenuItem = {
+  const createNewMenu = async (menuName: string, parsedMenu?: ParsedMenu) => {
+    console.log('🏗️ Creating new menu:', { menuName, parsedMenu });
+    
+    // First, save all parsed items to the Item Library
+    const createdItemIds: string[] = [];
+    
+    if (parsedMenu && parsedMenu.sections && parsedMenu.sections.length > 0) {
+      console.log(`📥 Processing ${parsedMenu.sections.length} sections from parsed menu...`);
+      
+      // Import persistence functions once
+      const { saveItem } = await import('@/utils/persistence');
+      
+      parsedMenu.sections.forEach((parsedSection) => {
+        console.log(`🔍 Processing section: "${parsedSection.sectionName}" with ${parsedSection.items.length} items`);
+        
+        parsedSection.items.forEach((item) => {
+          // Create a unique ID for each item
+          const itemId = `parsed-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          
+          // Create FoodItem for the Item Library
+          const foodItem: CentralizedFoodItem = {
+            id: itemId,
+            name: item.name,
+            internalName: item.name,
+            description: item.description || '', // Use extracted description or empty string
+            price: item.price || 0, // Use extracted price or default to 0
+            image: '',
+            menus: [menuName], // Associate with this menu
+            available: true
+          };
+          
+          // Save to localStorage persistence (synchronous now)
+          saveItem(itemId, foodItem);
+          
+          console.log(`📝 Saved item "${item.name}" to Item Library with ID: ${itemId}`);
+          createdItemIds.push(itemId);
+        });
+      });
+      
+      console.log(`✅ Successfully processed all items. Created ${createdItemIds.length} items total.`);
+    } else {
+      console.log('⚠️ No parsed menu data or empty sections array');
+    }
+    
+    // Convert parsed menu sections to MenuSection format, referencing Item Library items
+    console.log(`🔄 Starting section conversion. ParsedMenu exists: ${!!parsedMenu}`);
+    console.log(`🔄 ParsedMenu sections: ${parsedMenu ? parsedMenu.sections.length : 'N/A'}`);
+    
+    const sections: MenuSection[] = parsedMenu && parsedMenu.sections ? 
+      parsedMenu.sections.map((parsedSection, sectionIndex) => {
+        console.log(`🔨 Converting section ${sectionIndex}: "${parsedSection.sectionName}" with ${parsedSection.items.length} items`);
+        
+        const section = {
+          id: parsedSection.sectionName.toLowerCase().replace(/\s+/g, '-'),
+          title: parsedSection.sectionName,
+          items: parsedSection.items.map((item, itemIndex) => {
+            // Calculate the correct item ID from our created items
+            const globalItemIndex = parsedMenu.sections
+              .slice(0, sectionIndex)
+              .reduce((total, sec) => total + sec.items.length, 0) + itemIndex;
+            
+            const itemRef = {
+              id: createdItemIds[globalItemIndex] || `fallback-${itemIndex}`,
+              name: item.name,
+              image: '',
+              specialRequests: undefined
+            };
+            
+            console.log(`   📦 Item ${itemIndex}: "${item.name}" → ID: ${itemRef.id}`);
+            return itemRef;
+          })
+        };
+        
+        console.log(`✅ Created section: "${section.title}" with ${section.items.length} items`);
+        return section;
+      }) : [];
+
+    console.log(`🔢 FINAL: Total sections created: ${sections.length}`);
+    console.log(`📋 FINAL: All sections:`, sections);
+    console.log(`📚 FINAL: Created ${createdItemIds.length} items in Item Library`);
+    console.log(`🆔 FINAL: Item IDs:`, createdItemIds);
+
+    const newMenu: MenuWithSections = {
       name: menuName,
       internal_name: menuName, // Initially same as external name
       external_name: menuName, // Initially same as name
       entryPoint: 'In-room dining',
-      isNew: true
+      isNew: true,
+      sections: sections
     };
 
+    console.log(`✅ Final menu object:`, newMenu);
+
+    const updatedMenus = [...appState.menus, newMenu];
+    
     setAppState(prev => ({
       ...prev,
-      menus: [...prev.menus, newMenu],
+      menus: updatedMenus,
       currentPage: 'edit-menu',
       editingMenu: newMenu
     }));
+    
+    // IMPORTANT: Save to localStorage so it persists
+    console.log(`💾 Saving menu to localStorage...`);
+    saveMenuData(updatedMenus);
+    console.log(`✅ Menu saved to localStorage successfully!`);
+    
+    console.log(`🎯 Menu creation complete. Should navigate to edit-menu page.`);
   };
 
   const saveMenu = (externalName: string, internalName: string, isNew: boolean) => {
@@ -829,10 +930,18 @@ export const AppRouter: React.FC = () => {
   };
 
   const deleteMenu = (menuName: string) => {
+    const updatedMenus = appState.menus.filter(menu => menu.name !== menuName);
+    
     setAppState(prev => ({
       ...prev,
-      menus: prev.menus.filter(menu => menu.name !== menuName)
+      menus: updatedMenus
     }));
+    
+    // IMPORTANT: Save to localStorage so deletion persists
+    console.log(`🗑️ Saving updated menu list to localStorage after deleting "${menuName}"...`);
+    saveMenuData(updatedMenus);
+    console.log(`✅ Menu deletion saved to localStorage successfully!`);
+    
     showToast('Menu deleted successfully', 'success');
   };
 
@@ -1103,6 +1212,11 @@ export const AppRouter: React.FC = () => {
         />
       );
     case 'edit-menu':
+      // Debug: Log the editing menu state
+      console.log('🔍 EditMenu page rendering. EditingMenu state:', appState.editingMenu);
+      console.log('📂 Sections being passed to EditMenuPage:', appState.editingMenu?.sections);
+      console.log('📊 Section count:', appState.editingMenu?.sections?.length || 0);
+      
       return (
         <>
           <EditMenuPage

@@ -1,5 +1,5 @@
 import { forwardRef, InputHTMLAttributes, useState } from "react";
-import { colors } from "../src/lib/design-tokens";
+import { colors } from "../../lib/design-tokens";
 import { BaseFormProps, InputType, InputSize } from "./types";
 import clsx from "clsx";
 

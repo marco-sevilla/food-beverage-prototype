@@ -38,7 +38,7 @@ export const GuestItemDetailsMobilePreview: React.FC<GuestItemDetailsMobilePrevi
   const [imageError, setImageError] = useState(false);
 
   return (
-    <div className="h-full bg-gray-100 flex flex-col items-center py-8 px-6">
+    <div className="h-full bg-gray-100 flex flex-col items-center py-8 px-6" style={{overscrollBehavior: 'none'}}>
       {/* Mobile Preview Container */}
       <div className="flex-1 w-full max-w-md flex items-center justify-center">
         <div 
@@ -56,7 +56,8 @@ export const GuestItemDetailsMobilePreview: React.FC<GuestItemDetailsMobilePrevi
             className="h-full overflow-y-auto"
             style={{ 
               borderRadius: '28px',
-              pointerEvents: 'auto' // Allow scrolling
+              pointerEvents: 'auto', // Allow scrolling
+              overscrollBehavior: 'none' // Prevent overscroll
             }}
           >
             

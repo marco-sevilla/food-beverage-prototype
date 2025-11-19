@@ -253,7 +253,7 @@ export const EditCompendiumItemPage: React.FC<EditCompendiumItemPageProps> = ({
   };
 
   return (
-    <div className="h-screen flex bg-gray-50 overflow-hidden">
+    <div className="h-screen flex bg-gray-50 overflow-hidden" style={{overscrollBehavior: 'none'}}>
       {/* Sidebar Navigation - Same as CompendiumPage */}
       <aside className="flex flex-col shrink-0 w-[180px] h-full overflow-hidden" style={{backgroundColor: 'rgb(51, 51, 51)'}}>
         <div className="flex items-center justify-center pt-6 pb-6 shrink-0">
@@ -456,7 +456,7 @@ export const EditCompendiumItemPage: React.FC<EditCompendiumItemPageProps> = ({
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col bg-white min-h-0 h-full overflow-hidden">
+      <main className="flex-1 flex flex-col bg-white min-h-0 overflow-hidden">
         {/* Property-level Top Bar */}
         <div className="bg-white border-b border-neutral-200 flex items-center justify-between py-2 px-6 shrink-0">
           <div className="flex items-center gap-2">
@@ -531,7 +531,8 @@ export const EditCompendiumItemPage: React.FC<EditCompendiumItemPageProps> = ({
         {/* Main Content Area - Two Column Layout */}
         <div className="flex-1 flex min-h-0 overflow-hidden">
           {/* Left Column - Item Configuration Panel */}
-          <div className="flex-1 bg-white border-r border-neutral-200 overflow-y-auto p-6 space-y-6 h-full">
+          <div className="flex-1 bg-white border-r border-neutral-200 overflow-y-auto" style={{maxHeight: '100vh', overscrollBehavior: 'none'}}>
+            <div className="p-6 space-y-6">
             
             {/* Translations Section */}
             <div className="bg-white border border-neutral-200 rounded-lg shadow-sm">
@@ -1077,10 +1078,11 @@ export const EditCompendiumItemPage: React.FC<EditCompendiumItemPageProps> = ({
                 </div>
               </div>
             </div>
+            </div>
           </div>
 
           {/* Right Column - Mobile Preview Panel */}
-          <div className="w-1/2 bg-gray-50 overflow-y-auto h-full">
+          <div className="w-1/2 bg-gray-50 overflow-y-auto" style={{maxHeight: '100vh', overscrollBehavior: 'none'}}>
             <GuestItemDetailsMobilePreview
               itemName={currentItemName}
               itemType={itemType}

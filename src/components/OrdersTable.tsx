@@ -14,7 +14,7 @@ interface Order {
   roomNumber: string;
   items: string[];
   total: number;
-  status: 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
+  status: 'pending' | 'accepted' | 'cancelled';
   orderTime: string;
   deliveryTime?: string;
   notes?: string;
@@ -22,14 +22,13 @@ interface Order {
 
 interface OrdersTableProps {
   orders: Order[];
-  orderStatus: 'pending' | 'preparing' | 'delivered' | 'cancelled';
+  orderStatus: 'pending' | 'accepted' | 'cancelled' | 'past';
   selectedOrderId?: string;
   prepTimeMinutes?: number;
   onRowClick?: (order: Order) => void;
   onViewDetails?: (order: Order) => void;
   onApprove?: (order: Order) => void;
   onDeny?: (order: Order) => void;
-  onMarkDelivered?: (order: Order) => void;
 }
 
 export const OrdersTable: React.FC<OrdersTableProps> = ({ 
@@ -40,8 +39,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
   onRowClick, 
   onViewDetails, 
   onApprove, 
-  onDeny,
-  onMarkDelivered 
+  onDeny
 }) => {
   // Get time elapsed from order time - simulating based on order id
   const getTimeElapsed = (orderId: string) => {
@@ -95,7 +93,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
           <tr className="border-b" style={{ borderBottomColor: colors.colorBlack6 }}>
             <th className="text-left py-3 px-6 font-roboto text-[12px] font-medium tracking-wider uppercase w-40" 
                 style={{ color: colors.colorBlack4 }}>
-              {orderStatus === 'delivered' ? 'DELIVERY TIME' : 'TIME ELAPSED'}
+              {orderStatus === 'past' ? 'STATUS' : 'TIME ELAPSED'}
               <span className="ml-1 text-xs">↕</span>
             </th>
             <th className="text-left py-3 px-6 font-roboto text-[12px] font-medium tracking-wider uppercase w-40" 
@@ -135,9 +133,35 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                 backgroundColor: isSelected ? colors.colorBlueCanary5 : 'transparent'
               }}
             >
-              {/* Time Elapsed / Delivery Time */}
+              {/* Time Elapsed / Delivery Time / Status */}
               <td className="py-4 px-6 w-40">
                 {(() => {
+                  if (orderStatus === 'past') {
+                    // Show status tags for past orders
+                    if (order.status === 'accepted') {
+                      return (
+                        <CanaryTag 
+                          label="ACCEPTED"
+                          color={TagColor.SUCCESS}
+                          variant={TagVariant.OUTLINE}
+                          size={TagSize.COMPACT}
+                          uppercase={true}
+                        />
+                      );
+                    } else if (order.status === 'cancelled') {
+                      return (
+                        <CanaryTag 
+                          label="DENIED"
+                          color={TagColor.ERROR}
+                          variant={TagVariant.OUTLINE}
+                          size={TagSize.COMPACT}
+                          uppercase={true}
+                        />
+                      );
+                    }
+                  }
+                  
+                  // Show time elapsed for active orders
                   const timeElapsedMinutes = getTimeElapsed(order.id);
                   const tagColor = getTimeThreshold(timeElapsedMinutes);
                   return (
@@ -195,23 +219,9 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                     View details
                   </CanaryButton>
                   
-                  {/* Mark as delivered button for in progress orders */}
-                  {orderStatus === 'preparing' && (
-                    <CanaryButton
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onMarkDelivered?.(order);
-                      }}
-                      type={ButtonType.SHADED}
-                      size={ButtonSize.COMPACT}
-                      color={ButtonColor.NORMAL}
-                    >
-                      Mark as delivered
-                    </CanaryButton>
-                  )}
                   
-                  {/* Three-dot dropdown for new orders (approve/deny) and in progress orders */}
-                  {(orderStatus === 'pending' || orderStatus === 'preparing') && (
+                  {/* Three-dot dropdown for new orders (approve/deny) only */}
+                  {orderStatus === 'pending' && (
                     <CanaryDropdown
                       trigger={
                         <CanaryButton
@@ -221,7 +231,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                           icon={<Icon path={mdiDotsHorizontal} size="16px" />}
                         />
                       }
-                      items={orderStatus === 'pending' ? [
+                      items={[
                         {
                           id: 'approve',
                           label: 'Approve',
@@ -232,14 +242,6 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                         {
                           id: 'deny',
                           label: 'Deny',
-                          icon: <Icon path={mdiClose} size="16px" color={colors.danger} />,
-                          onClick: () => onDeny?.(order),
-                          variant: 'danger'
-                        }
-                      ] : [
-                        {
-                          id: 'cancel',
-                          label: 'Cancel Order',
                           icon: <Icon path={mdiClose} size="16px" color={colors.danger} />,
                           onClick: () => onDeny?.(order),
                           variant: 'danger'
