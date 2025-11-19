@@ -175,7 +175,7 @@ export const ConnectMenusModal: React.FC<ConnectMenusModalProps> = ({
             <p className="font-roboto text-[10px] font-medium text-[#666666] uppercase leading-[16px] w-[200px]">
               Linked locations
             </p>
-            <div className="w-[24px] opacity-0">
+            <div className="w-[16px] opacity-0">
               {/* Placeholder for checkbox alignment */}
             </div>
           </div>
@@ -207,7 +207,7 @@ export const ConnectMenusModal: React.FC<ConnectMenusModalProps> = ({
                     </div>
                     
                     {/* Custom Checkbox */}
-                    <div className="w-[24px] h-[24px] flex items-center justify-center">
+                    <div className="w-[16px] h-[16px] flex items-center justify-center">
                       <input
                         type="checkbox"
                         checked={isChecked}
@@ -215,7 +215,7 @@ export const ConnectMenusModal: React.FC<ConnectMenusModalProps> = ({
                         className="sr-only"
                       />
                       <div
-                        className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
+                        className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
                           isChecked
                             ? 'bg-[#2858C4] border-[#2858C4]'
                             : 'border-neutral-200 bg-white hover:border-gray-400'

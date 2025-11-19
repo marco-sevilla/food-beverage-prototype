@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { MenuManagementPage } from './MenuManagementPage';
 import { OrderManagementPage } from './OrderManagementPage';
+import { runMenuParserTest } from '../utils/menuParser';
 
 // Types for the app state
 type AppPage = 'menu-management' | 'order-management';
@@ -17,6 +18,16 @@ const SAMPLE_MENUS = [
 
 export const FoodBeverageApp: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<AppPage>('order-management');
+  
+  console.log('FoodBeverageApp rendered, currentPage:', currentPage);
+
+  const handleTestMenuParser = () => {
+    try {
+      runMenuParserTest();
+    } catch (error) {
+      console.error('Test failed:', error);
+    }
+  };
 
   const handleBackToOrders = () => {
     setCurrentPage('order-management');
@@ -53,15 +64,38 @@ export const FoodBeverageApp: React.FC = () => {
 
   if (currentPage === 'order-management') {
     return (
-      <OrderManagementPage 
-        onManageMenus={handleManageMenus}
-      />
+      <div>
+        {/* Temporary test button */}
+        <div className="p-4 bg-yellow-100 border-b">
+          <button 
+            onClick={handleTestMenuParser}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            🧪 Test Menu Parser (Check Console)
+          </button>
+          <span className="ml-3 text-sm text-gray-600">Temporary test button - will be removed</span>
+        </div>
+        <OrderManagementPage 
+          onManageMenus={handleManageMenus}
+        />
+      </div>
     );
   }
 
   if (currentPage === 'menu-management') {
     return (
-      <MenuManagementPage
+      <div>
+        {/* Temporary test button */}
+        <div className="p-4 bg-yellow-100 border-b">
+          <button 
+            onClick={handleTestMenuParser}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            🧪 Test Menu Parser (Check Console)
+          </button>
+          <span className="ml-3 text-sm text-gray-600">Temporary test button - will be removed</span>
+        </div>
+        <MenuManagementPage
         menus={SAMPLE_MENUS}
         onEditMenu={handleEditMenu}
         onCreateMenu={handleCreateMenu}
@@ -71,6 +105,7 @@ export const FoodBeverageApp: React.FC = () => {
         onGoToOrdering={handleGoToOrdering}
         onBackToOrders={handleBackToOrders}
       />
+      </div>
     );
   }
 

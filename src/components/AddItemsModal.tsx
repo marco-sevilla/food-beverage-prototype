@@ -50,7 +50,7 @@ const Checkbox: React.FC<CheckboxProps> = ({ checked, onChange, disabled = false
   <button
     onClick={() => !disabled && onChange(!checked)}
     disabled={disabled}
-    className={`flex items-center justify-center w-6 h-6 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
+    className={`flex items-center justify-center w-4 h-4 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
       checked 
         ? 'bg-canary-blue-1 border-canary-blue-1' 
         : disabled 

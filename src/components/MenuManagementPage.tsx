@@ -5,6 +5,7 @@ import Icon from '@mdi/react';
 import clsx from 'clsx';
 import { colors, spacing } from '@/lib/design-tokens';
 import CanarySwitch from './temp-components/CanarySwitch';
+import CanaryCheckbox from '../../../components/canary-ui/forms/CanaryCheckbox';
 import { AnimatedSection } from './PageTransition';
 import { CreateMenuModal } from './CreateMenuModal';
 import { CreateItemModal } from './CreateItemModal';
@@ -99,28 +100,48 @@ const Button: React.FC<ButtonProps> = ({ children, variant = 'primary', onClick 
 interface MenuItemProps {
   name: string;
   entryPoint: string;
+  isSelected?: boolean;
+  onSelect?: (selected: boolean) => void;
   onEdit?: () => void;
   onDelete?: () => void;
   onPreview?: () => void;
   isLast?: boolean;
 }
 
-const MenuItem: React.FC<MenuItemProps> = ({ name, entryPoint, onEdit, onDelete, onPreview, isLast = false }) => (
-  <div className={`flex items-center justify-between py-4 px-4 pr-6 bg-white ${
+const MenuItem: React.FC<MenuItemProps> = ({ 
+  name, 
+  entryPoint, 
+  isSelected = false,
+  onSelect,
+  onEdit, 
+  onDelete, 
+  onPreview, 
+  isLast = false 
+}) => (
+  <div className={`flex items-center py-4 px-4 pr-6 bg-white ${
     isLast ? '' : 'border-b border-neutral-200'
   }`}>
-    {/* Menu Name Column - fixed width to match header */}
-    <div className="w-48 lg:w-48 md:w-40 sm:w-32 font-roboto text-body-sm font-medium text-canary-black-1 truncate ml-3">
+    {/* Checkbox Column */}
+    <div className="w-8 flex items-center justify-center shrink-0">
+      <CanaryCheckbox
+        size="normal"
+        checked={isSelected}
+        onChange={(e) => onSelect?.(e.target.checked)}
+      />
+    </div>
+    
+    {/* Menu Name Column */}
+    <div className="w-48 lg:w-48 md:w-40 sm:w-32 font-roboto text-body-sm font-medium text-canary-black-1 truncate ml-2">
       {name}
     </div>
     
-    {/* Entry Points Column - positioned to align with header */}
+    {/* Entry Points Column */}
     <div className="w-48 lg:w-48 md:w-40 sm:w-32 hidden sm:block font-roboto text-body-sm font-normal text-canary-black-1 truncate">
       {entryPoint}
     </div>
     
-    {/* Actions Column - fixed width to match header with 3 buttons */}
-    <div className="flex items-center gap-2 w-24 justify-end">
+    {/* Actions Column */}
+    <div className="flex items-center gap-2 w-24 justify-end ml-auto">
       <Button variant="icon" onClick={onPreview}>
         <Icon path={mdiEye} size={0.8} color="#666666" />
       </Button>
@@ -146,6 +167,8 @@ interface FoodItemProps {
   menus: string[];
   price: number;
   available: boolean;
+  isSelected?: boolean;
+  onSelect?: (id: string, selected: boolean) => void;
   onToggle: (id: string, available: boolean) => void;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
@@ -159,7 +182,9 @@ const FoodItem: React.FC<FoodItemProps> = ({
   image, 
   menus, 
   price, 
-  available, 
+  available,
+  isSelected = false,
+  onSelect,
   onToggle, 
   onEdit, 
   onDelete,
@@ -168,20 +193,29 @@ const FoodItem: React.FC<FoodItemProps> = ({
   const [imageError, setImageError] = React.useState(false);
 
   return (
-  <div className={`flex items-center justify-between py-4 px-4 pr-6 bg-white ${
+  <div className={`flex items-center py-4 px-4 pr-6 bg-white ${
     isLast ? '' : 'border-b border-neutral-200'
   }`}>
-    {/* Item Column - image + name */}
-    <div className="flex items-center gap-3 w-72 lg:w-72 md:w-60 sm:w-48">
+    {/* Checkbox Column */}
+    <div className="w-8 flex items-center justify-center shrink-0">
+      <CanaryCheckbox
+        size="normal"
+        checked={isSelected}
+        onChange={(e) => onSelect?.(id, e.target.checked)}
+      />
+    </div>
+    
+    {/* Item Column (thumbnail + name) */}
+    <div className="w-64 lg:w-64 md:w-52 sm:w-40 flex items-center gap-3 ml-2 min-w-0">
       {image && !imageError ? (
         <img 
           src={image} 
           alt={name}
-          className="w-10 h-10 rounded object-cover"
+          className="w-10 h-10 rounded object-cover shrink-0"
           onError={() => setImageError(true)}
         />
       ) : (
-        <div className="w-10 h-10 bg-neutral-200 rounded flex items-center justify-center">
+        <div className="w-10 h-10 bg-neutral-200 rounded flex items-center justify-center shrink-0">
           <Icon path={mdiImage} size={0.6} color="#666666" />
         </div>
       )}
@@ -207,8 +241,8 @@ const FoodItem: React.FC<FoodItemProps> = ({
       ${price.toFixed(2)}
     </div>
     
-    {/* Availability Column - toggle + actions */}
-    <div className="flex items-center gap-3 w-32 justify-end">
+    {/* Actions Column */}
+    <div className="flex items-center gap-3 w-32 justify-end ml-auto">
       <CanarySwitch checked={available} onChange={(checked) => onToggle(id, checked)} size="normal" />
       <Button variant="icon" onClick={() => onEdit(id)}>
         <Icon path={mdiPencil} size={0.8} />
@@ -225,7 +259,7 @@ const FoodItem: React.FC<FoodItemProps> = ({
 interface MenuManagementPageProps {
   menus: Array<{ name: string; entryPoint: string; isNew?: boolean }>;
   onEditMenu?: (menuName: string, entryPoint: string) => void;
-  onCreateMenu?: (menuName: string) => void;
+  onCreateMenu?: (menuName: string, parsedMenu?: any) => void;
   onDeleteMenu?: (menuName: string) => void;
   onPreviewMenu?: (menuName: string) => void;
   onEditItem?: (itemId: string) => void;
@@ -270,6 +304,10 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
   
   const [foodItems, setFoodItems] = useState(FOOD_ITEMS);
   const [prepTime, setPrepTime] = useState(prepTimeMinutes.toString());
+  
+  // Bulk selection state
+  const [selectedMenus, setSelectedMenus] = useState<Set<string>>(new Set());
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 
   // Load saved items from localStorage and merge with default items
   useEffect(() => {
@@ -401,8 +439,10 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
   }, []);
 
 
-  const handleCreateMenu = (menuName: string) => {
-    onCreateMenu?.(menuName);
+  const handleCreateMenu = async (menuName: string, parsedMenu?: any) => {
+    if (onCreateMenu) {
+      await onCreateMenu(menuName, parsedMenu);
+    }
     setIsCreateModalOpen(false);
   };
 
@@ -494,6 +534,63 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
 
     setIsCreateItemModalOpen(false);
   };
+
+  // Bulk selection handlers
+  const handleMenuSelect = (menuName: string, selected: boolean) => {
+    setSelectedMenus(prev => {
+      const newSelection = new Set(prev);
+      if (selected) {
+        newSelection.add(menuName);
+      } else {
+        newSelection.delete(menuName);
+      }
+      return newSelection;
+    });
+  };
+
+  const handleItemSelect = (itemId: string, selected: boolean) => {
+    setSelectedItems(prev => {
+      const newSelection = new Set(prev);
+      if (selected) {
+        newSelection.add(itemId);
+      } else {
+        newSelection.delete(itemId);
+      }
+      return newSelection;
+    });
+  };
+
+  const handleBulkDelete = () => {
+    if (activeTab === 'menus' && selectedMenus.size > 0) {
+      // Delete selected menus
+      selectedMenus.forEach(menuName => {
+        onDeleteMenu?.(menuName);
+      });
+      setSelectedMenus(new Set());
+      onShowToast?.(`${selectedMenus.size} menu${selectedMenus.size > 1 ? 's' : ''} deleted successfully`, 'success');
+    } else if (activeTab === 'item-library' && selectedItems.size > 0) {
+      // Delete selected items
+      setFoodItems(prevItems => 
+        prevItems.filter(item => !selectedItems.has(item.id))
+      );
+      
+      // Remove from localStorage
+      import('@/utils/persistence').then(({ deleteItem }) => {
+        selectedItems.forEach(itemId => {
+          deleteItem(itemId);
+        });
+      });
+      
+      setSelectedItems(new Set());
+      onShowToast?.(`${selectedItems.size} item${selectedItems.size > 1 ? 's' : ''} deleted successfully`, 'success');
+    }
+  };
+
+  // Clear selections when switching tabs
+  useEffect(() => {
+    setSelectedMenus(new Set());
+    setSelectedItems(new Set());
+  }, [activeTab]);
 
   // Options for prep time setting
   const prepTimeOptions: CanarySelectOption[] = [
@@ -732,10 +829,18 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
 
                 <div className="flex flex-col gap-1">
                   {/* Headers */}
-                  <div className="flex items-start justify-between px-4 pb-0 pr-6 sm:pl-4 font-roboto text-caption-sm font-medium text-canary-black-3 uppercase">
-                    <div className="w-48 lg:w-48 md:w-40 sm:w-32 ml-3">Menu name</div>
+                  <div className="flex items-center py-2 px-4 pr-6 font-roboto text-caption-sm font-medium text-canary-black-3 uppercase">
+                    {/* Checkbox Column Header */}
+                    <div className="w-8 shrink-0"></div>
+                    
+                    {/* Menu Name Column Header */}
+                    <div className="w-48 lg:w-48 md:w-40 sm:w-32 ml-2">Menu name</div>
+                    
+                    {/* Entry Points Column Header */}
                     <div className="w-48 lg:w-48 md:w-40 sm:w-32 hidden sm:block">Entry Points</div>
-                    <div className="w-32 opacity-0 text-right">Actions</div>
+                    
+                    {/* Actions Column Header */}
+                    <div className="w-24 opacity-0 text-right ml-auto">Actions</div>
                   </div>
 
                   {/* Menu Items */}
@@ -745,6 +850,8 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
                         key={`${index}-${item.name}`}
                         name={item.name}
                         entryPoint={item.entryPoint}
+                        isSelected={selectedMenus.has(item.name)}
+                        onSelect={(selected) => handleMenuSelect(item.name, selected)}
                         isLast={index === menus.length - 1}
                         onPreview={() => onPreviewMenu?.(item.name)}
                         onEdit={() => onEditMenu?.(item.name, item.entryPoint)}
@@ -768,11 +875,21 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
                 
                 <div className="flex flex-col gap-1">
                   {/* Headers */}
-                  <div className="flex items-start justify-between px-4 pb-0 pr-6 sm:pl-4 font-roboto text-caption-sm font-medium text-canary-black-3 uppercase">
-                    <div className="w-72 lg:w-72 md:w-60 sm:w-48 ml-3">Item</div>
+                  <div className="flex items-center py-2 px-4 pr-6 font-roboto text-caption-sm font-medium text-canary-black-3 uppercase">
+                    {/* Checkbox Column Header */}
+                    <div className="w-8 shrink-0"></div>
+                    
+                    {/* Item Column Header */}
+                    <div className="w-64 lg:w-64 md:w-52 sm:w-40 ml-2">Item</div>
+                    
+                    {/* Menus Column Header */}
                     <div className="w-56 lg:w-56 md:w-44 sm:w-36">Menus</div>
+                    
+                    {/* Price Column Header */}
                     <div className="w-20">Price</div>
-                    <div className="w-32 text-right">Availability</div>
+                    
+                    {/* Actions Column Header */}
+                    <div className="w-32 text-right ml-auto">Availability</div>
                   </div>
 
                   {/* Food Items */}
@@ -787,6 +904,8 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
                         menus={item.menus}
                         price={item.price}
                         available={item.available}
+                        isSelected={selectedItems.has(item.id)}
+                        onSelect={handleItemSelect}
                         onToggle={handleItemToggle}
                         onEdit={handleItemEdit}
                         onDelete={handleItemDelete}
@@ -841,14 +960,31 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
         </div>
       </div>
 
-      {/* Sticky Go to Ordering Flow Button */}
+      {/* Floating Action Buttons */}
       <AnimatedSection delay={240}>
-        <button
-          onClick={onGoToOrdering}
-          className="fixed bottom-6 right-6 bg-canary-blue-1 text-white px-4 py-0 h-10 rounded font-roboto font-medium text-sm shadow-lg hover:opacity-90 transition-opacity z-50 whitespace-nowrap flex items-center justify-center"
-        >
-          Go to ordering flow
-        </button>
+        <div className="fixed bottom-6 right-6 flex items-center gap-3 z-50">
+          {/* Bulk Delete Button - show when items are selected */}
+          {((activeTab === 'menus' && selectedMenus.size > 0) || 
+            (activeTab === 'item-library' && selectedItems.size > 0)) && (
+            <button
+              onClick={handleBulkDelete}
+              className="bg-red-600 text-white px-4 py-0 h-10 rounded font-roboto font-medium text-sm shadow-lg hover:opacity-90 transition-opacity whitespace-nowrap flex items-center justify-center"
+            >
+              Delete {activeTab === 'menus' ? 
+                `${selectedMenus.size} menu${selectedMenus.size > 1 ? 's' : ''}` : 
+                `${selectedItems.size} item${selectedItems.size > 1 ? 's' : ''}`
+              }
+            </button>
+          )}
+          
+          {/* Go to Ordering Flow Button */}
+          <button
+            onClick={onGoToOrdering}
+            className="bg-canary-blue-1 text-white px-4 py-0 h-10 rounded font-roboto font-medium text-sm shadow-lg hover:opacity-90 transition-opacity whitespace-nowrap flex items-center justify-center"
+          >
+            Go to ordering flow
+          </button>
+        </div>
       </AnimatedSection>
 
       {/* Create Menu Modal */}

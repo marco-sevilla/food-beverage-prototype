@@ -33,6 +33,8 @@ import {
 
 // Import the CanarySidebar component
 import CanarySidebar, { SidebarVariant, type SidebarSection, type SidebarNavigationItem } from './CanarySidebar';
+import CanaryInput from '../../temp-components/CanaryInput';
+import { InputType, InputSize } from '../../temp-components/types';
 
 
 // Button component
@@ -119,6 +121,8 @@ interface TextareaProps {
   onChange: (value: string) => void;
   placeholder?: string;
   rows?: number;
+  isAIFilled?: boolean;
+  onAIFilledChange?: (isAIFilled: boolean) => void;
 }
 
 const Textarea: React.FC<TextareaProps> = ({ 
@@ -126,21 +130,46 @@ const Textarea: React.FC<TextareaProps> = ({
   value, 
   onChange, 
   placeholder, 
-  rows = 4 
-}) => (
-  <div className="flex flex-col gap-2">
-    <label className="font-roboto text-body-sm font-medium text-canary-black-1">
-      {label}
-    </label>
-    <textarea
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      rows={rows}
-      className="w-full px-4 py-3 border border-neutral-200 rounded font-roboto text-body-sm text-canary-black-1 focus:outline-none focus:ring-2 focus:ring-canary-blue-1 focus:border-canary-blue-1 resize-vertical"
-    />
-  </div>
-);
+  rows = 4,
+  isAIFilled = false,
+  onAIFilledChange
+}) => {
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    // Remove AI filled state when user modifies the text
+    if (isAIFilled && onAIFilledChange) {
+      onAIFilledChange(false);
+    }
+    onChange(e.target.value);
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="font-roboto text-body-sm font-medium text-canary-black-1">
+        {label}
+      </label>
+      <div className="relative">
+        <textarea
+          value={value}
+          onChange={handleChange}
+          placeholder={placeholder}
+          rows={rows}
+          className={`w-full px-4 py-3 border border-neutral-200 rounded font-roboto text-body-sm text-canary-black-1 focus:outline-none focus:ring-2 focus:ring-canary-blue-1 focus:border-canary-blue-1 resize-vertical ${isAIFilled ? 'pr-12' : ''}`}
+        />
+        {isAIFilled && (
+          <div className="absolute right-2 top-2 flex items-center pointer-events-none z-20">
+            <img 
+              src="/AI star.svg" 
+              alt="AI filled" 
+              width="20" 
+              height="20"
+              className="w-5 h-5"
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 // Image Upload component
 interface ImageUploadProps {
@@ -223,6 +252,8 @@ interface FoodItem {
   description: string;
   price: number;
   image?: string;
+  menus?: string[];
+  available?: boolean;
 }
 
 // Main component
@@ -243,7 +274,18 @@ export const EditItemPage: React.FC<EditItemPageProps> = ({
     internalName: item?.internalName || item?.name || '',
     description: item?.description || '',
     price: item?.price || 0,
-    image: item?.image
+    image: item?.image || '',
+    menus: item?.menus || [],
+    available: item?.available !== undefined ? item?.available : true
+  });
+  
+  // Track AI-filled fields - detect based on item ID starting with "parsed-"
+  const isAIParsedItem = item?.id?.startsWith('parsed-') || false;
+  const [aiFilledFields, setAiFilledFields] = useState<{[key: string]: boolean}>({
+    name: isAIParsedItem && !!item?.name,
+    internalName: isAIParsedItem && !!item?.internalName,
+    description: isAIParsedItem && !!item?.description,
+    price: isAIParsedItem && !!item?.price
   });
 
   // Load saved data when component mounts
@@ -314,6 +356,14 @@ export const EditItemPage: React.FC<EditItemPageProps> = ({
   };
 
   const updateFormData = (field: keyof FoodItem, value: any) => {
+    // Clear AI-filled state for this field when modified
+    setAiFilledFields(prev => ({
+      ...prev,
+      [field]: false,
+      // Also clear internalName AI state when name is changed if they're synced
+      ...(field === 'name' && formData.name === formData.internalName ? { internalName: false } : {})
+    }));
+    
     setFormData(prev => {
       const updatedData = {
         ...prev,
@@ -540,42 +590,36 @@ export const EditItemPage: React.FC<EditItemPageProps> = ({
                 <div className="space-y-4">
                   {/* External Item Name */}
                   <div>
-                    <label className="block font-roboto text-body-sm font-medium text-canary-black-1 mb-2">
-                      External item name*
-                    </label>
-                    <input
-                      type="text"
+                    <CanaryInput
+                      label="External item name"
+                      type={InputType.TEXT}
+                      size={InputSize.LARGE}
                       value={formData.name}
                       onChange={(e) => updateFormData('name', e.target.value)}
-                      className="w-full h-12 px-4 border border-neutral-200 rounded font-roboto text-body-sm text-canary-black-1 focus:outline-none focus:ring-2 focus:ring-canary-blue-1 focus:border-canary-blue-1"
                       placeholder="Enter external item name"
+                      isRequired={true}
+                      isAIFilled={aiFilledFields.name}
+                      onAIFilledChange={(isAIFilled) => setAiFilledFields(prev => ({ ...prev, name: isAIFilled }))}
+                      error={errors.name}
+                      helperText="This name will be displayed to guests and the public."
                     />
-                    <p className="mt-1 font-roboto text-caption text-canary-black-4">
-                      This name will be displayed to guests and the public.
-                    </p>
-                    {errors.name && (
-                      <p className="mt-1 text-sm text-red-500">{errors.name}</p>
-                    )}
                   </div>
 
                   {/* Internal Item Name */}
                   <div>
-                    <label className="block font-roboto text-body-sm font-medium text-canary-black-1 mb-2">
-                      Internal item name*
-                    </label>
-                    <input
-                      type="text"
+                    <CanaryInput
+                      label="Internal item name"
+                      type={InputType.TEXT}
+                      size={InputSize.LARGE}
                       value={formData.internalName || ''}
                       onChange={(e) => updateFormData('internalName', e.target.value)}
-                      className="w-full h-12 px-4 border border-neutral-200 rounded font-roboto text-body-sm text-canary-black-1 focus:outline-none focus:ring-2 focus:ring-canary-blue-1 focus:border-canary-blue-1"
                       placeholder="Enter internal item name"
+                      isRequired={true}
+                      isAIFilled={aiFilledFields.internalName}
+                      onAIFilledChange={(isAIFilled) => setAiFilledFields(prev => ({ ...prev, internalName: isAIFilled }))}
+                      error={errors.internalName}
+                      helperText="This name will be used for internal staff views and operations."
                     />
-                    <p className="mt-1 font-roboto text-caption text-canary-black-4">
-                      This name will be used for internal staff views and operations.
-                    </p>
-                    {errors.internalName && (
-                      <p className="mt-1 text-sm text-red-500">{errors.internalName}</p>
-                    )}
                   </div>
 
                   {/* Description Field */}
@@ -585,20 +629,23 @@ export const EditItemPage: React.FC<EditItemPageProps> = ({
                     onChange={(value) => updateFormData('description', value)}
                     placeholder="Enter item description"
                     rows={3}
+                    isAIFilled={aiFilledFields.description}
+                    onAIFilledChange={(isAIFilled) => setAiFilledFields(prev => ({ ...prev, description: isAIFilled }))}
                   />
 
                   {/* Price Field */}
                   <div>
-                    <Input
+                    <CanaryInput
                       label="Price"
+                      type={InputType.NUMBER}
+                      size={InputSize.LARGE}
                       value={formData.price.toString()}
-                      onChange={(value) => updateFormData('price', parseFloat(value) || 0)}
+                      onChange={(e) => updateFormData('price', parseFloat(e.target.value) || 0)}
                       placeholder="0.00"
-                      type="number"
+                      isAIFilled={aiFilledFields.price}
+                      onAIFilledChange={(isAIFilled) => setAiFilledFields(prev => ({ ...prev, price: isAIFilled }))}
+                      error={errors.price}
                     />
-                    {errors.price && (
-                      <p className="mt-1 text-sm text-red-500">{errors.price}</p>
-                    )}
                   </div>
                 </div>
               </div>

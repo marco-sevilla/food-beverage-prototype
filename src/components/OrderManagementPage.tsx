@@ -49,7 +49,7 @@ interface Order {
   roomNumber: string;
   items: string[];
   total: number;
-  status: 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
+  status: 'pending' | 'accepted' | 'cancelled';
   orderTime: string;
   deliveryTime?: string;
   notes?: string;
@@ -455,11 +455,22 @@ export const OrderManagementPage: React.FC<OrderManagementPageProps> = ({
     const storedOrders = loadOrders();
     const storedOrderDetails = loadOrderDetails();
     
+    // Filter out any 'preparing', 'ready', or 'delivered' status orders as they're no longer valid
+    const cleanedStoredOrders = storedOrders.filter(order => 
+      order.status === 'pending' || order.status === 'accepted' || order.status === 'cancelled'
+    );
+    
+    // Update localStorage with cleaned orders if any were removed
+    if (cleanedStoredOrders.length !== storedOrders.length) {
+      localStorage.setItem('orders', JSON.stringify(cleanedStoredOrders));
+      console.log('Removed invalid order statuses from localStorage');
+    }
+    
     // Combine order details first
     const allOrderDetails = { ...MOCK_ORDER_DETAILS, ...storedOrderDetails };
     
     // Filter stored orders to only include those that have corresponding details
-    const validStoredOrders = storedOrders.filter(order => allOrderDetails[order.id]);
+    const validStoredOrders = cleanedStoredOrders.filter(order => allOrderDetails[order.id]);
     
     // Combine with mock orders
     setOrders([...validStoredOrders, ...MOCK_ORDERS]);
@@ -470,15 +481,15 @@ export const OrderManagementPage: React.FC<OrderManagementPageProps> = ({
     refreshOrders();
   }, []);
 
-  // Handle order approval (move to in progress)
+  // Handle order approval (move directly to accepted)
   const handleApproveOrder = (order: Order) => {
     console.log('handleApproveOrder called with order:', order);
     try {
-      const { updatedOrders, updatedOrderDetails } = updateOrderStatus(order.id, 'preparing', orders, orderDetails);
+      const { updatedOrders, updatedOrderDetails } = updateOrderStatus(order.id, 'accepted', orders, orderDetails);
       console.log('updateOrderStatus returned:', { updatedOrders, updatedOrderDetails });
       setOrders(updatedOrders);
       setOrderDetails(updatedOrderDetails);
-      console.log('Order approved and moved to in progress:', order.orderNumber);
+      console.log('Order approved and moved to accepted:', order.orderNumber);
     } catch (error) {
       console.error('Error in handleApproveOrder:', error);
     }
@@ -515,13 +526,6 @@ export const OrderManagementPage: React.FC<OrderManagementPageProps> = ({
     }
   };
 
-  // Handle mark as delivered
-  const handleMarkDelivered = (order: Order) => {
-    const { updatedOrders, updatedOrderDetails } = updateOrderStatus(order.id, 'delivered', orders, orderDetails);
-    setOrders(updatedOrders);
-    setOrderDetails(updatedOrderDetails);
-    console.log('Order marked as delivered:', order.orderNumber);
-  };
 
 
   // Canary logo component
@@ -537,14 +541,12 @@ export const OrderManagementPage: React.FC<OrderManagementPageProps> = ({
   const statusFilterOptions: CanarySelectOption[] = [
     { label: 'All Orders', value: 'all' },
     { label: 'Pending', value: 'pending' },
-    { label: 'Preparing', value: 'preparing' },
-    { label: 'Ready', value: 'ready' },
-    { label: 'Delivered', value: 'delivered' },
+    { label: 'Accepted', value: 'accepted' },
     { label: 'Cancelled', value: 'cancelled' }
   ];
 
   // Filter orders by status for different tables
-  const filterOrdersByStatus = (status: 'pending' | 'preparing' | 'delivered' | 'cancelled') => {
+  const filterOrdersByStatus = (status: 'pending' | 'accepted' | 'cancelled') => {
     return orders.filter(order => {
       const matchesSearch = searchQuery === '' || 
         order.guestName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -558,10 +560,23 @@ export const OrderManagementPage: React.FC<OrderManagementPageProps> = ({
     });
   };
 
+  // Filter for past orders (both accepted and cancelled)
+  const filterPastOrders = () => {
+    return orders.filter(order => {
+      const matchesSearch = searchQuery === '' || 
+        order.guestName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.roomNumber.includes(searchQuery);
+      
+      const matchesStatusFilter = statusFilter === 'all' || order.status === statusFilter;
+      const isPastOrder = order.status === 'accepted' || order.status === 'cancelled';
+      
+      return matchesSearch && matchesStatusFilter && isPastOrder;
+    });
+  };
+
   const newOrders = filterOrdersByStatus('pending');
-  const inProgressOrders = filterOrdersByStatus('preparing');
-  const deliveredOrders = filterOrdersByStatus('delivered');
-  const cancelledOrders = filterOrdersByStatus('cancelled');
+  const pastOrders = filterPastOrders();
 
   // Calculate the number of pending orders for the sidebar badge
   const pendingOrdersCount = newOrders.length;
@@ -750,68 +765,15 @@ export const OrderManagementPage: React.FC<OrderManagementPageProps> = ({
                 />
               </div>
 
-              {/* In Progress Orders Section */}
-              <div className="space-y-4">
-                <h3 className="font-roboto text-[16px] font-medium" style={{ color: colors.black1 }}>
-                  In progress orders
-                </h3>
-                <OrdersTable
-                  orders={inProgressOrders}
-                  orderStatus="preparing"
-                  selectedOrderId={selectedOrderId ?? undefined}
-                  prepTimeMinutes={prepTimeMinutes}
-                  onRowClick={(order) => {
-                    console.log('Clicked order:', order.orderNumber);
-                  }}
-                  onViewDetails={(order) => {
-                    const selectedOrderDetails = orderDetails[order.id];
-                    if (selectedOrderDetails) {
-                      setSelectedOrder(selectedOrderDetails);
-                      setSelectedOrderId(order.id);
-                      setIsSideSheetOpen(true);
-                    } else {
-                      console.warn('Order details not found for order:', order.id, order.orderNumber);
-                    }
-                  }}
-                  onDeny={handleDenyOrder}
-                  onMarkDelivered={handleMarkDelivered}
-                />
-              </div>
 
-              {/* Delivered Orders Section */}
+              {/* Past Orders Section */}
               <div className="space-y-4">
                 <h3 className="font-roboto text-[16px] font-medium" style={{ color: colors.black1 }}>
-                  Delivered orders
+                  Past orders
                 </h3>
                 <OrdersTable
-                  orders={deliveredOrders}
-                  orderStatus="delivered"
-                  selectedOrderId={selectedOrderId ?? undefined}
-                  prepTimeMinutes={prepTimeMinutes}
-                  onRowClick={(order) => {
-                    console.log('Clicked order:', order.orderNumber);
-                  }}
-                  onViewDetails={(order) => {
-                    const selectedOrderDetails = orderDetails[order.id];
-                    if (selectedOrderDetails) {
-                      setSelectedOrder(selectedOrderDetails);
-                      setSelectedOrderId(order.id);
-                      setIsSideSheetOpen(true);
-                    } else {
-                      console.warn('Order details not found for order:', order.id, order.orderNumber);
-                    }
-                  }}
-                />
-              </div>
-
-              {/* Cancelled Orders Section */}
-              <div className="space-y-4">
-                <h3 className="font-roboto text-[16px] font-medium" style={{ color: colors.black1 }}>
-                  Cancelled orders
-                </h3>
-                <OrdersTable
-                  orders={cancelledOrders}
-                  orderStatus="cancelled"
+                  orders={pastOrders}
+                  orderStatus="past"
                   selectedOrderId={selectedOrderId ?? undefined}
                   prepTimeMinutes={prepTimeMinutes}
                   onRowClick={(order) => {
@@ -855,7 +817,7 @@ export const OrderManagementPage: React.FC<OrderManagementPageProps> = ({
             roomNumber: order.roomNumber,
             items: order.items.map(item => item.name),
             total: order.subtotal,
-            status: order.status as 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled',
+            status: order.status as 'pending' | 'accepted' | 'cancelled',
             orderTime: order.orderDate
           };
           handleApproveOrder(orderForHandler);
@@ -870,7 +832,7 @@ export const OrderManagementPage: React.FC<OrderManagementPageProps> = ({
             roomNumber: order.roomNumber,
             items: order.items.map(item => item.name),
             total: order.subtotal,
-            status: order.status as 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled',
+            status: order.status as 'pending' | 'accepted' | 'cancelled',
             orderTime: order.orderDate
           };
           handleDenyOrder(orderForHandler);

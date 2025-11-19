@@ -409,8 +409,8 @@ const MenuSelect: React.FC<MenuSelectProps> = ({
                   
                   {/* Checkmark for currently selected menu */}
                   {isSelected && (
-                    <div className="flex items-center justify-center w-6 h-6 shrink-0">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <div className="flex items-center justify-center w-4 h-4 shrink-0">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                         <path 
                           d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" 
                           fill="#666666"
