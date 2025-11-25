@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import CanaryModal from '../../../components/canary-ui/layout/CanaryModal';
-import CanaryButton from '../../../components/canary-ui/buttons/CanaryButton';
-import { ButtonType } from '../../../components/canary-ui/buttons/types';
+import CanaryModal from './temp-components/CanaryModal';
+import CanaryButton from './temp-components/CanaryButton';
+import { ButtonType } from './temp-components/button-types';
 
 interface ApiKeyModalProps {
   isOpen: boolean;
