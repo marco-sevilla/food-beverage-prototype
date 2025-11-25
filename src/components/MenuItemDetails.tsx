@@ -50,11 +50,14 @@ export const MenuItemDetails: React.FC<MenuItemDetailsProps> = ({
   // Handle animation timing
   useEffect(() => {
     if (isOpen) {
-      // Start in closed position
+      // Start in closed position (off-screen)
       setIsAnimating(true);
-      // Trigger slide-up animation on next frame
+      // Double requestAnimationFrame ensures the browser has painted the initial state
+      // before we trigger the slide-up animation
       requestAnimationFrame(() => {
-        setIsAnimating(false);
+        requestAnimationFrame(() => {
+          setIsAnimating(false);
+        });
       });
     }
   }, [isOpen]);
@@ -65,7 +68,7 @@ export const MenuItemDetails: React.FC<MenuItemDetailsProps> = ({
     setTimeout(() => {
       onClose();
       setIsAnimating(false);
-    }, 600);
+    }, 400);
   };
 
   const handleAddToCart = () => {
@@ -88,12 +91,10 @@ export const MenuItemDetails: React.FC<MenuItemDetailsProps> = ({
   const mockDescription = `Indulge in our ${item.name}, a luxurious blend of fresh ingredients crafted with exquisite attention to detail.`;
 
   return (
-    <div 
+    <div
       className="absolute inset-0 z-50 flex items-end justify-center"
       style={{
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        transition: 'opacity 600ms ease-out',
-        opacity: isAnimating ? 0 : 1,
         borderRadius: '44px',
         overflow: 'hidden'
       }}
@@ -103,31 +104,10 @@ export const MenuItemDetails: React.FC<MenuItemDetailsProps> = ({
         className="bg-white rounded-t-xl shadow-xl w-full h-full max-h-[90vh] flex flex-col overflow-hidden"
         style={{
           transform: isAnimating ? 'translateY(100%)' : 'translateY(0%)',
-          transition: 'transform 600ms cubic-bezier(0.4, 0.0, 0.2, 1)',
+          transition: 'transform 400ms cubic-bezier(0.32, 0.72, 0, 1)',
           willChange: 'transform'
         }}
       >
-        {/* Preview Mode Banner - Very Top */}
-        {isPreviewMode && (
-          <div 
-            className="text-white text-center py-2 px-4"
-            style={{ 
-              backgroundColor: colors.red1
-            }}
-          >
-            <span 
-              style={{
-                fontFamily: typography.fontFamily.primary,
-                fontSize: typography.fontSize.bodySm,
-                fontWeight: typography.fontWeight.medium,
-                color: colors.white
-              }}
-            >
-              Menu preview mode
-            </span>
-          </div>
-        )}
-
         {/* Header Image (if exists) */}
         {item.image && (
           <div className="relative w-full" style={{ height: '230px' }}>

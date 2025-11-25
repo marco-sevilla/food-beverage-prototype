@@ -883,7 +883,7 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
         {/* Preview Mode Banner - Fixed at top */}
         <div
           className="sticky top-0 z-50 text-white text-center py-2 px-4"
-          style={{ backgroundColor: colors.red1 }}
+          style={{ backgroundColor: colors.black1 }}
         >
           <span
             style={{
@@ -1114,10 +1114,10 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
       >
         {/* Preview Mode Banner - Very Top */}
         {isPreviewMode && (
-          <div 
+          <div
             className="text-white text-center py-2 px-4"
-            style={{ 
-              backgroundColor: colors.red1,
+            style={{
+              backgroundColor: colors.black1,
               borderTopLeftRadius: '44px',
               borderTopRightRadius: '44px'
             }}

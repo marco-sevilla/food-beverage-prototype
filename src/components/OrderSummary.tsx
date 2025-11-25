@@ -228,7 +228,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
         {/* Preview Mode Banner - Fixed at top */}
         <div
           className="sticky top-0 z-50 text-white text-center py-2 px-4"
-          style={{ backgroundColor: colors.red1 }}
+          style={{ backgroundColor: colors.black1 }}
         >
           <span
             style={{
