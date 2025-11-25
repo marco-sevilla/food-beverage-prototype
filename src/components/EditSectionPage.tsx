@@ -335,12 +335,12 @@ const sampleItems: SectionItem[] = [
   {
     id: '1',
     name: 'Croissant',
-    image: 'https://images.unsplash.com/photo-1555507036-ab794f4eeecb?w=40&h=40&fit=crop&crop=center'
+    image: 'https://images.unsplash.com/photo-1555507036-ab794f4eeecb?w=800&h=600&fit=crop&crop=center&auto=format&q=80'
   },
   {
     id: '2',
     name: 'Frittata',
-    image: 'https://images.unsplash.com/photo-1506084868230-bb9d95c24759?w=40&h=40&fit=crop&crop=center'
+    image: 'https://images.unsplash.com/photo-1506084868230-bb9d95c24759?w=800&h=600&fit=crop&crop=center&auto=format&q=80'
   }
 ];
 

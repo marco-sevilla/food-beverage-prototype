@@ -232,24 +232,52 @@ export const AppRouter: React.FC = () => {
     message: ''
   });
 
-  const [appState, setAppState] = useState<AppState>({
-    currentPage: 'order-management',
-    menus: savedData.menus || initialMenus,
-    cart: {},
-    activeManagementTab: 'menus',
-    isPreviewMode: false,
-    prepTimeMinutes: savedData.prepTimeMinutes || 30,
-    toast: {
-      isVisible: false,
-      message: '',
-      type: 'success'
-    },
-    pageTransition: {
-      isTransitioning: false,
-      phase: 'none',
-      direction: 'forward'
+  // Check URL parameters for preview mode on initial load
+  const getInitialState = (): AppState => {
+    const baseState: AppState = {
+      currentPage: 'order-management',
+      menus: savedData.menus || initialMenus,
+      cart: {},
+      activeManagementTab: 'menus',
+      isPreviewMode: false,
+      prepTimeMinutes: savedData.prepTimeMinutes || 30,
+      toast: {
+        isVisible: false,
+        message: '',
+        type: 'success'
+      },
+      pageTransition: {
+        isTransitioning: false,
+        phase: 'none',
+        direction: 'forward'
+      }
+    };
+
+    // Check for preview parameter in URL (only in browser)
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const previewMenuName = urlParams.get('preview');
+
+      if (previewMenuName) {
+        const menusToSearch = savedData.menus || initialMenus;
+        const menu = menusToSearch.find(m => m.name === previewMenuName);
+
+        if (menu) {
+          return {
+            ...baseState,
+            currentPage: 'menu-preview',
+            previewingMenu: menu,
+            isPreviewMode: true,
+            cart: {}
+          };
+        }
+      }
     }
-  });
+
+    return baseState;
+  };
+
+  const [appState, setAppState] = useState<AppState>(getInitialState);
 
   // Save menus to localStorage whenever they change
   useEffect(() => {
@@ -449,17 +477,6 @@ export const AppRouter: React.FC = () => {
 
   const navigateToMobileMenuOrdering = () => {
     transitionToPage('mobile-preview');
-  };
-
-  const navigateToMenuPreview = (menuName: string) => {
-    const menu = appState.menus.find(m => m.name === menuName);
-    setAppState(prev => ({
-      ...prev,
-      currentPage: 'menu-preview',
-      previewingMenu: menu || { name: menuName, entryPoint: 'Preview' },
-      isPreviewMode: true,
-      cart: {} // Clear cart when starting preview
-    }));
   };
 
   const navigateBackFromPreview = () => {
@@ -1156,7 +1173,7 @@ export const AppRouter: React.FC = () => {
         <>
           <OrderSummary
             cartEntries={Object.values(appState.cart)}
-            onBack={appState.isPreviewMode ? navigateBackFromPreview : navigateBackToMobileMenuOrdering}
+            onBack={navigateBackToMobileMenuOrdering}
             onAddMoreItems={navigateBackToMobileMenuOrdering}
             onUpdateQuantity={handleUpdateQuantity}
             onSubmitOrder={navigateToOrderLoading}
@@ -1289,7 +1306,6 @@ export const AppRouter: React.FC = () => {
           onEditMenu={navigateToEditMenu}
           onCreateMenu={createNewMenu}
           onDeleteMenu={deleteMenu}
-          onPreviewMenu={navigateToMenuPreview}
           onEditItem={navigateToEditItem}
           onUpdateItem={saveItem}
           onShowToast={showToast}

@@ -234,6 +234,37 @@ export const FOOD_ITEMS: FoodItem[] = [
 // Default placeholder image for items without images
 const DEFAULT_FOOD_IMAGE = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjRjBGMEYwIi8+CjxwYXRoIGQ9Ik0yNiAyNEgyMlYyOEgyNlYyNFoiIGZpbGw9IiM5OTk5OTkiLz4KPHA+IDgwIDYwIGZpbGw9IiM5OTk5OTkiLz4KPHA+IDgwIDYwIGZpbGw9IiM5OTk5OTkiLz4KPC9zdmc+Cg==';
 
+/**
+ * Normalize Unsplash image URLs to use proper dimensions for thumbnails
+ * This fixes legacy data that may have small image sizes (e.g., w=40&h=40)
+ */
+export const normalizeImageUrl = (url: string | undefined): string => {
+  if (!url) return DEFAULT_FOOD_IMAGE;
+
+  // If it's a data URL or not an Unsplash URL, return as-is
+  if (url.startsWith('data:') || !url.includes('unsplash.com')) {
+    return url;
+  }
+
+  // Parse the URL and rebuild with correct parameters
+  try {
+    const urlObj = new URL(url);
+
+    // Set proper dimensions for thumbnails
+    urlObj.searchParams.set('w', '800');
+    urlObj.searchParams.set('h', '600');
+    urlObj.searchParams.set('fit', 'crop');
+    urlObj.searchParams.set('crop', 'center');
+    urlObj.searchParams.set('auto', 'format');
+    urlObj.searchParams.set('q', '80');
+
+    return urlObj.toString();
+  } catch {
+    // If URL parsing fails, return the original URL
+    return url;
+  }
+};
+
 // Helper functions
 export const convertToSectionItem = (foodItem: FoodItem): SectionItem => ({
   id: foodItem.id,

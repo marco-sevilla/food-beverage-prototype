@@ -104,55 +104,61 @@ interface MenuItemProps {
   onSelect?: (selected: boolean) => void;
   onEdit?: () => void;
   onDelete?: () => void;
-  onPreview?: () => void;
   isLast?: boolean;
 }
 
-const MenuItem: React.FC<MenuItemProps> = ({ 
-  name, 
-  entryPoint, 
+const MenuItem: React.FC<MenuItemProps> = ({
+  name,
+  entryPoint,
   isSelected = false,
   onSelect,
-  onEdit, 
-  onDelete, 
-  onPreview, 
-  isLast = false 
-}) => (
-  <div className={`flex items-center py-4 px-4 pr-6 bg-white ${
-    isLast ? '' : 'border-b border-neutral-200'
-  }`}>
-    {/* Checkbox Column */}
-    <div className="w-8 flex items-center justify-center shrink-0">
-      <CanaryCheckbox
-        checked={isSelected}
-        onChange={(checked) => onSelect?.(checked)}
-      />
+  onEdit,
+  onDelete,
+  isLast = false
+}) => {
+  // Open preview in a new browser tab
+  const handlePreviewClick = () => {
+    const previewUrl = `${window.location.origin}?preview=${encodeURIComponent(name)}`;
+    window.open(previewUrl, '_blank');
+  };
+
+  return (
+    <div className={`flex items-center py-4 px-4 pr-6 bg-white ${
+      isLast ? '' : 'border-b border-neutral-200'
+    }`}>
+      {/* Checkbox Column */}
+      <div className="w-8 flex items-center justify-center shrink-0">
+        <CanaryCheckbox
+          checked={isSelected}
+          onChange={(checked) => onSelect?.(checked)}
+        />
+      </div>
+
+      {/* Menu Name Column */}
+      <div className="w-48 lg:w-48 md:w-40 sm:w-32 font-roboto text-body-sm font-medium text-canary-black-1 truncate ml-2">
+        {name}
+      </div>
+
+      {/* Entry Points Column */}
+      <div className="w-48 lg:w-48 md:w-40 sm:w-32 hidden sm:block font-roboto text-body-sm font-normal text-canary-black-1 truncate">
+        {entryPoint}
+      </div>
+
+      {/* Actions Column */}
+      <div className="flex items-center gap-2 w-24 justify-end ml-auto">
+        <Button variant="icon" onClick={handlePreviewClick}>
+          <Icon path={mdiEye} size={0.8} color="#666666" />
+        </Button>
+        <Button variant="icon" onClick={onEdit}>
+          <Icon path={mdiPencil} size={0.8} />
+        </Button>
+        <Button variant="icon" onClick={onDelete}>
+          <Icon path={mdiDelete} size={0.8} color="#E40046" />
+        </Button>
+      </div>
     </div>
-    
-    {/* Menu Name Column */}
-    <div className="w-48 lg:w-48 md:w-40 sm:w-32 font-roboto text-body-sm font-medium text-canary-black-1 truncate ml-2">
-      {name}
-    </div>
-    
-    {/* Entry Points Column */}
-    <div className="w-48 lg:w-48 md:w-40 sm:w-32 hidden sm:block font-roboto text-body-sm font-normal text-canary-black-1 truncate">
-      {entryPoint}
-    </div>
-    
-    {/* Actions Column */}
-    <div className="flex items-center gap-2 w-24 justify-end ml-auto">
-      <Button variant="icon" onClick={onPreview}>
-        <Icon path={mdiEye} size={0.8} color="#666666" />
-      </Button>
-      <Button variant="icon" onClick={onEdit}>
-        <Icon path={mdiPencil} size={0.8} />
-      </Button>
-      <Button variant="icon" onClick={onDelete}>
-        <Icon path={mdiDelete} size={0.8} color="#E40046" />
-      </Button>
-    </div>
-  </div>
-);
+  );
+};
 
 
 // ToggleSwitch component replaced with official CanarySwitch
@@ -257,7 +263,7 @@ const FoodItem: React.FC<FoodItemProps> = ({
 interface MenuManagementPageProps {
   menus: Array<{ name: string; entryPoint: string; isNew?: boolean }>;
   onEditMenu?: (menuName: string, entryPoint: string) => void;
-  onCreateMenu?: (menuName: string) => void;
+  onCreateMenu?: (menuName: string, parsedMenu?: import('../utils/claudeMenuParser').ParsedMenu) => void;
   onDeleteMenu?: (menuName: string) => void;
   onPreviewMenu?: (menuName: string) => void;
   onEditItem?: (itemId: string) => void;
@@ -271,9 +277,9 @@ interface MenuManagementPageProps {
   onUpdatePrepTime?: (prepTimeMinutes: number) => void;
 }
 
-export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({ 
-  menus, 
-  onEditMenu, 
+export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
+  menus,
+  onEditMenu,
   onCreateMenu,
   onDeleteMenu,
   onPreviewMenu,
@@ -437,9 +443,9 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
   }, []);
 
 
-  const handleCreateMenu = async (menuName: string) => {
+  const handleCreateMenu = async (menuName: string, parsedMenu?: import('../utils/claudeMenuParser').ParsedMenu) => {
     if (onCreateMenu) {
-      await onCreateMenu(menuName);
+      await onCreateMenu(menuName, parsedMenu);
     }
     setIsCreateModalOpen(false);
   };
@@ -851,7 +857,6 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
                         isSelected={selectedMenus.has(item.name)}
                         onSelect={(selected) => handleMenuSelect(item.name, selected)}
                         isLast={index === menus.length - 1}
-                        onPreview={() => onPreviewMenu?.(item.name)}
                         onEdit={() => onEditMenu?.(item.name, item.entryPoint)}
                         onDelete={() => handleDeleteClick(item.name)}
                       />

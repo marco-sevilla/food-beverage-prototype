@@ -17,6 +17,7 @@ import { OrderingClosedModal } from './OrderingClosedModal';
 import { MenuUnavailableMessage } from './MenuUnavailableMessage';
 import { isMenuAvailable, getMenuAvailabilityInfo, getDefaultMenu } from '@/utils/menuAvailability';
 import { loadData, saveDemoTime, saveSelectedMenu, saveCart, getImage, getItem, saveGuestInfo, getGuestInfo, saveViewMode, getViewMode } from '@/utils/persistence';
+import { normalizeImageUrl } from '@/data/foodItems';
 import CanaryInput from '../../temp-components/CanaryInput';
 import CanarySegmentedControl from '../../temp-components/CanarySegmentedControl';
 import { InputSize } from '../../temp-components/types';
@@ -486,21 +487,25 @@ const MenuItem: React.FC<MenuItemProps> = ({
   const mockPrice = Math.floor((item.name.length * 7 + item.id.length * 3) % 30) + 15;
   
   // Get saved image for this item (check both storage systems)
+  // Use normalizeImageUrl to ensure proper dimensions for legacy data
   const savedItem = getItem(item.id);
-  const savedImage = savedItem?.image || getImage(item.id) || item.image;
+  const rawImage = savedItem?.image || getImage(item.id) || item.image;
+  const normalizedImage = normalizeImageUrl(rawImage);
+  // Check if we have a valid image (not the default SVG placeholder)
+  const hasValidImage = normalizedImage && !normalizedImage.startsWith('data:image/svg');
 
   return (
     <div className="flex items-center gap-4 p-3">
       {/* Item Image or Placeholder */}
-      {savedImage ? (
-        <img 
-          src={savedImage} 
+      {hasValidImage ? (
+        <img
+          src={normalizedImage}
           alt={item.name}
           className="w-16 h-16 rounded-lg object-cover shrink-0 cursor-pointer"
           onClick={() => onItemClick?.(item)}
         />
       ) : (
-        <div 
+        <div
           className="cursor-pointer"
           onClick={() => onItemClick?.(item)}
         >
@@ -871,10 +876,167 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
 
   const totalCartItems = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
 
+  // In preview mode, render without the mobile frame - fully responsive
+  if (isPreviewMode) {
+    return (
+      <div className="min-h-screen bg-white">
+        {/* Preview Mode Banner - Fixed at top */}
+        <div
+          className="sticky top-0 z-50 text-white text-center py-2 px-4"
+          style={{ backgroundColor: colors.red1 }}
+        >
+          <span
+            style={{
+              fontFamily: typography.fontFamily.primary,
+              fontSize: typography.fontSize.bodySm,
+              fontWeight: typography.fontWeight.medium,
+              color: colors.white
+            }}
+          >
+            Menu preview mode
+          </span>
+        </div>
+
+        {/* Responsive Container */}
+        <div className="w-full max-w-2xl mx-auto px-4 sm:px-6">
+          {/* Header */}
+          <div className="flex items-center justify-between py-4">
+            <Button
+              onClick={undefined}
+              variant="icon"
+              icon={<Icon path={mdiArrowLeft} size={1} />}
+            />
+
+            <h1 className="font-roboto font-semibold text-black text-center text-xl sm:text-2xl">
+              In-room dining
+            </h1>
+
+            <div className="w-10 h-10 opacity-0" />
+          </div>
+
+          {/* Menu Title */}
+          <div className="py-3">
+            <h2 className="font-roboto font-medium text-black text-2xl sm:text-[32px] sm:leading-[48px]">
+              {selectedMenuName}
+            </h2>
+          </div>
+
+          {/* Menu Unavailable Message */}
+          {!isCurrentMenuAvailable && (
+            <div className="pb-3">
+              <MenuUnavailableMessage
+                menuName={selectedMenuName}
+                timeInfo={menuOptions.find(opt => opt.value === selectedMenuName)?.timeInfo || ''}
+                status={menuOptions.find(opt => opt.value === selectedMenuName)?.status === 'available-later-today' ? 'available-later-today' : 'not-available-today'}
+              />
+            </div>
+          )}
+
+          {/* Section Tabs */}
+          {shouldShowTabs && (
+            <div className="border-b border-neutral-200">
+              <div className="flex">
+                {menuSections.map((section) => (
+                  <Tab
+                    key={section.id}
+                    active={activeSection === section.id}
+                    onClick={() => scrollToSection(section.id)}
+                  >
+                    {section.title}
+                  </Tab>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Scrollable Content */}
+          <div
+            ref={scrollContainerRef}
+            className="py-6"
+          >
+            {menuSections.map((section) => (
+              <div
+                key={section.id}
+                ref={(el) => { sectionRefs.current[section.id] = el; }}
+                data-section-id={section.id}
+                className="mb-6 last:mb-0"
+              >
+                <h3 className="font-roboto font-medium text-black text-xl sm:text-2xl mb-3">
+                  {section.title}
+                </h3>
+
+                <div className="border border-neutral-200 rounded-lg overflow-hidden">
+                  {section.items.length === 0 ? (
+                    <div className="p-8 text-center">
+                      <p className="text-gray-500 font-roboto text-sm">
+                        No items in this section yet
+                      </p>
+                    </div>
+                  ) : (
+                    section.items.map((item, index) => (
+                      <div key={item.id} className={index < section.items.length - 1 ? "border-b border-neutral-200" : ""}>
+                        <MenuItem
+                          item={item}
+                          quantity={cart[item.id] || 0}
+                          onAddToCart={handleAddToCart}
+                          onUpdateQuantity={handleUpdateQuantity}
+                          onItemClick={handleItemClick}
+                          isMenuAvailable={isCurrentMenuAvailable}
+                        />
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Bottom padding for fixed cart button */}
+          <div className={`transition-all duration-300 ease-in-out ${totalCartItems > 0 ? 'h-20' : 'h-0'}`} />
+        </div>
+
+        {/* Sticky Footer - Cart Button with slide animation */}
+        <div
+          className={`fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 p-4 transition-transform duration-300 ease-in-out ${
+            totalCartItems > 0 ? 'translate-y-0' : 'translate-y-full'
+          }`}
+        >
+          <div className="w-full max-w-2xl mx-auto">
+            <Button
+              className="w-full"
+              onClick={onViewCart}
+            >
+              View cart ({totalCartItems})
+            </Button>
+          </div>
+        </div>
+
+        {/* Menu Item Details Modal */}
+        <MenuItemDetails
+          item={selectedItem}
+          isOpen={isItemDetailsOpen}
+          onClose={handleItemDetailsClose}
+          onAddToCart={handleAddToCartFromDetails}
+          initialQuantity={selectedItem ? cart[selectedItem.id] || 1 : 1}
+          isMenuAvailable={isCurrentMenuAvailable}
+          isPreviewMode={isPreviewMode}
+        />
+
+        {/* Ordering Closed Modal */}
+        <OrderingClosedModal
+          isVisible={isOrderingClosedModalVisible}
+          onReturn={handleOrderingClosedModalReturn}
+          closedMenuNames={closedMenuNames}
+        />
+      </div>
+    );
+  }
+
+  // Non-preview mode - keep original mobile frame behavior
   return (
     <div className={clsx(
       "min-h-screen bg-gray-100",
-      viewMode === 'mobile' 
+      viewMode === 'mobile'
         ? "flex items-center justify-center p-8"
         : "p-0"
     )}>
@@ -932,11 +1094,11 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
       />
 
       {/* Responsive Frame */}
-      <div 
+      <div
         className={clsx(
           "relative bg-white overflow-hidden",
-          viewMode === 'mobile' 
-            ? "shadow-xl" 
+          viewMode === 'mobile'
+            ? "shadow-xl"
             : "min-h-screen"
         )}
         style={viewMode === 'mobile' ? {
@@ -979,14 +1141,14 @@ export const MobileMenuOrdering: React.FC<MobileMenuOrderingProps> = ({
           viewMode === 'mobile' ? "px-4 py-4" : "px-6 py-6"
         )}>
           {viewMode === 'mobile' ? (
-            <Button 
-              onClick={onBack}
+            <Button
+              onClick={isPreviewMode ? undefined : onBack}
               variant="icon"
               icon={<Icon path={mdiArrowLeft} size={1} />}
             />
           ) : (
             <Button
-              onClick={onBack}
+              onClick={isPreviewMode ? undefined : onBack}
               variant="outlined"
               icon={<Icon path={mdiArrowLeft} size={0.8} />}
               iconPosition="left"

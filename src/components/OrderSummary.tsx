@@ -11,6 +11,7 @@ import {
 import { colors, typography } from '@/lib/design-tokens';
 import { MenuItemPlaceholder } from './MenuItemPlaceholder';
 import { getGuestInfo, loadData } from '@/utils/persistence';
+import { normalizeImageUrl } from '@/data/foodItems';
 
 interface SectionItem {
   id: string;
@@ -107,12 +108,16 @@ const CartItemRow: React.FC<CartItemRowProps> = ({ item, onUpdateQuantity }) => 
     }
   };
 
+  // Normalize image URL to ensure proper dimensions
+  const normalizedImage = normalizeImageUrl(item.image);
+  const hasValidImage = normalizedImage && !normalizedImage.startsWith('data:image/svg');
+
   return (
     <div className="flex items-center gap-4 p-3">
         {/* Item Image or Placeholder */}
-        {item.image ? (
-          <img 
-            src={item.image} 
+        {hasValidImage ? (
+          <img
+            src={normalizedImage}
             alt={item.name}
             className="w-16 h-16 rounded-lg object-cover shrink-0"
           />
@@ -209,16 +214,147 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
   // Calculate total
   const estimatedTotal = localCartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
 
-  // Header image URL
-  const headerImageUrl = "https://images.unsplash.com/photo-1584464491033-06628f3a6b7b?w=430&h=230&fit=crop&crop=center";
+  // Header image URL - restaurant image
+  const headerImageUrl = "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=300&fit=crop&crop=center";
 
   if (localCartItems.length === 0) {
     return null; // Will redirect via useEffect
   }
 
+  // Preview mode - fully responsive layout without mobile frame
+  if (isPreviewMode) {
+    return (
+      <div className="min-h-screen bg-white">
+        {/* Preview Mode Banner - Fixed at top */}
+        <div
+          className="sticky top-0 z-50 text-white text-center py-2 px-4"
+          style={{ backgroundColor: colors.red1 }}
+        >
+          <span
+            style={{
+              fontFamily: typography.fontFamily.primary,
+              fontSize: typography.fontSize.bodySm,
+              fontWeight: typography.fontWeight.medium,
+              color: colors.white
+            }}
+          >
+            Menu preview mode
+          </span>
+        </div>
+
+        {/* Header Image Section */}
+        <div className="relative w-full h-[200px] sm:h-[250px] overflow-hidden">
+          <img
+            src={headerImageUrl}
+            alt="Order summary header"
+            className="w-full h-full object-cover"
+          />
+
+          {/* Back Button Overlay */}
+          <div className="absolute top-4 left-4">
+            <button
+              onClick={onBack}
+              className="flex items-center justify-center w-12 h-12 bg-white rounded shadow-md hover:bg-gray-50 transition-colors"
+            >
+              <Icon path={mdiArrowLeft} size={1} color="#000" />
+            </button>
+          </div>
+        </div>
+
+        {/* Responsive Container */}
+        <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 py-6 pb-24">
+          {/* Page Title */}
+          <h1 className="font-roboto text-2xl sm:text-[28px] font-medium text-black leading-[42px] mb-4">
+            Review your cart
+          </h1>
+
+          {/* Guest and Room Info */}
+          <div className="border border-neutral-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-roboto text-sm font-medium text-black">Guest</span>
+              <span className="font-roboto text-sm font-normal text-gray-600">{guestInfo.name}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="font-roboto text-sm font-medium text-black">Room</span>
+              <span className="font-roboto text-sm font-normal text-gray-600">{guestInfo.room}</span>
+            </div>
+          </div>
+
+          {/* Cart Items */}
+          <div className="border border-neutral-200 rounded-lg overflow-hidden mb-6">
+            {localCartItems.map((item, index) => (
+              <div key={item.id} className={index < localCartItems.length - 1 ? "border-b border-neutral-200" : ""}>
+                <CartItemRow
+                  item={item}
+                  onUpdateQuantity={onUpdateQuantity}
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Estimated Total */}
+          <div className="flex items-center justify-between mb-4">
+            <span className="font-roboto text-base font-normal text-black">Estimated total</span>
+            <span className="font-roboto text-base font-medium text-black">${estimatedTotal}</span>
+          </div>
+
+          {/* Add More Items Button */}
+          <button
+            onClick={onAddMoreItems}
+            className="w-full h-10 border border-neutral-200 rounded-lg flex items-center justify-center gap-2 mb-6 hover:bg-gray-50 transition-colors"
+          >
+            <Icon path={mdiPlus} size={0.8} color="#000" />
+            <span className="font-roboto text-sm font-medium text-black">Add more items</span>
+          </button>
+
+          {/* Please Note Section */}
+          <div className="mb-6">
+            <h3 className="font-roboto text-base font-medium text-black mb-1">
+              Please note
+            </h3>
+            <ul className="space-y-1 text-sm font-roboto font-normal text-black leading-[22px]">
+              <li className="flex">
+                <span className="mr-2">•</span>
+                <span>Your final bill will be delivered with your food order which will include tax and service fees.</span>
+              </li>
+              <li className="flex">
+                <span className="mr-2">•</span>
+                <span>Estimated order time will be 30 minutes.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Sticky Footer - Submit Order Button */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 p-4">
+          <div className="w-full max-w-2xl mx-auto">
+            <p
+              className="text-center mb-3"
+              style={{
+                fontFamily: typography.fontFamily.primary,
+                fontSize: typography.fontSize.bodySm,
+                lineHeight: typography.lineHeight.bodySm,
+                color: colors.black1
+              }}
+            >
+              This is a preview. Orders placed here won't be submitted.
+            </p>
+            <Button
+              className="w-full h-12 text-lg"
+              disabled
+            >
+              Submit order
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Non-preview mode - keep original mobile frame behavior
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100 p-8">
-      {/* Back to Mobile Landing Button */}
+      {/* Back to Menu Button */}
       <div className="fixed top-8 left-8 z-50">
         <Button
           onClick={onBack}
@@ -241,7 +377,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
       </div>
 
       {/* Mobile Frame */}
-      <div 
+      <div
         className="relative bg-white overflow-hidden shadow-xl"
         style={{
           width: '430px',
@@ -250,48 +386,17 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
           boxShadow: '0px 8px 16px 0px rgba(0,0,0,0.16)'
         }}
       >
-        {/* Preview Mode Banner - Very Top */}
-        {isPreviewMode && (
-          <div 
-            className="text-white text-center py-2 px-4"
-            style={{ 
-              backgroundColor: colors.red1,
-              borderTopLeftRadius: '44px',
-              borderTopRightRadius: '44px'
-            }}
-          >
-            <span 
-              style={{
-                fontFamily: typography.fontFamily.primary,
-                fontSize: typography.fontSize.bodySm,
-                fontWeight: typography.fontWeight.medium,
-                color: colors.white
-              }}
-            >
-              Menu preview mode
-            </span>
-          </div>
-        )}
-
         {/* Header Image Section */}
         <div className="relative w-full h-[230px] overflow-hidden">
-          <img 
+          <img
             src={headerImageUrl}
             alt="Order summary header"
             className="w-full h-full object-cover"
           />
-          
-          {/* Progress Indicators */}
-          <div className="absolute bottom-9 left-1/2 transform -translate-x-1/2 flex items-center gap-2">
-            <div className="w-1.5 h-1.5 bg-white/40 rounded-full"></div>
-            <div className="w-2 h-2 bg-white rounded-full"></div>
-            <div className="w-1.5 h-1.5 bg-white/40 rounded-full"></div>
-            <div className="w-1.5 h-1.5 bg-white/40 rounded-full"></div>
-          </div>
 
           {/* Back Button Overlay */}
           <div className="absolute top-4 left-4">
-            <button 
+            <button
               onClick={onBack}
               className="flex items-center justify-center w-12 h-12 bg-white rounded shadow-md hover:bg-gray-50 transition-colors"
             >
@@ -366,11 +471,11 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
 
         {/* Sticky Footer - Submit Order Button */}
         <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-neutral-200 p-4">
-          <Button 
+          <Button
             className="w-full h-12 text-lg"
-            onClick={isPreviewMode ? onBack : onSubmitOrder}
+            onClick={onSubmitOrder}
           >
-            {isPreviewMode ? 'End preview' : 'Submit order'}
+            Submit order
           </Button>
         </div>
       </div>
