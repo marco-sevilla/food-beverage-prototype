@@ -5,9 +5,9 @@ import Icon from '@mdi/react';
 import { mdiArrowLeft, mdiClose } from '@mdi/js';
 import { colors } from './temp-components/design-tokens';
 
-// Image constants from Figma - same as approval email
-const hotelLogoImage = "http://localhost:3845/assets/02ef86990d898c1888997fe617cc329d3a113fe3.png";
-const hotelInteriorImage = "http://localhost:3845/assets/ce95c7983cba689bd228ef0b76c4300b31ee9df4.png";
+// Image constants - using local assets
+const hotelLogoImage = "/statler logo.png";
+const hotelInteriorImage = "/Screenshot 2025-11-18 at 7.50.26 AM.png";
 
 // Types for order details
 interface OrderItem {
@@ -49,32 +49,28 @@ const getDenialEmailContent = (reason: string, comment?: string) => {
   if (reasonKey.includes('items unavailable') || reasonKey.includes('unavailable')) {
     return {
       title: "Your in-room dining order could not be completed",
-      message: "We're sorry, one or more items in your order are currently unavailable. Please contact the hotel staff if you have any questions.",
-      buttonText: "Contact hotel"
+      message: "We're sorry, one or more items in your order are currently unavailable. Please contact the hotel staff if you have any questions."
     };
   }
   
   if (reasonKey.includes('duplicate') || reasonKey.includes('already received')) {
     return {
       title: "Your in-room dining order could not be completed",
-      message: "It looks like we received this order more than once, so the duplicate request has been canceled. Your original order is still being processed. If this wasn't intentional, please contact the hotel staff.",
-      buttonText: "Contact hotel"
+      message: "It looks like we received this order more than once, so the duplicate request has been canceled. Your original order is still being processed. If this wasn't intentional, please contact the hotel staff."
     };
   }
   
   if (reasonKey.includes('guest requested') || reasonKey.includes('cancel')) {
     return {
       title: "Your in-room dining order has been cancelled",
-      message: "Your order has been canceled as requested. If you'd like to place a new order, you may do so at any time.",
-      buttonText: "Place new order"
+      message: "Your order has been canceled as requested. If you'd like to place a new order, you may do so at any time."
     };
   }
   
   if (reasonKey.includes('invalid') || reasonKey.includes('test')) {
     return {
       title: "Your in-room dining order could not be completed",
-      message: "This order could not be completed because it appears to be a test or an invalid request. If this was unintentional, please contact the hotel staff for assistance.",
-      buttonText: "Contact staff"
+      message: "This order could not be completed because it appears to be a test or an invalid request. If this was unintentional, please contact the hotel staff for assistance."
     };
   }
   
@@ -85,16 +81,14 @@ const getDenialEmailContent = (reason: string, comment?: string) => {
 
 ${comment || 'Please contact the hotel staff for more information.'}
 
-If you have any questions or would like to place another order, please contact the hotel staff.`,
-      buttonText: "Contact staff"
+If you have any questions or would like to place another order, please contact the hotel staff.`
     };
   }
   
   // Default fallback
   return {
     title: "Your in-room dining order could not be completed",
-    message: "We're sorry, your order could not be completed. Please contact the hotel staff if you have any questions.",
-    buttonText: "Contact staff"
+    message: "We're sorry, your order could not be completed. Please contact the hotel staff if you have any questions."
   };
 };
 
@@ -224,18 +218,6 @@ export const DenialEmailPreview: React.FC<DenialEmailPreviewProps> = ({
                   >
                     {emailContent.message}
                   </p>
-                </div>
-
-                {/* Button */}
-                <div className="inline-grid grid-cols-max-content grid-rows-max-content place-items-start">
-                  <button 
-                    className="bg-black text-white font-roboto text-[14px] font-medium px-4 py-0 rounded h-10 flex items-center justify-center gap-2 overflow-hidden"
-                    style={{ fontVariationSettings: "'wdth' 100" }}
-                  >
-                    <div className="flex flex-col justify-center leading-none text-center whitespace-pre">
-                      <p className="leading-[1.5]">{emailContent.buttonText}</p>
-                    </div>
-                  </button>
                 </div>
 
                 {/* Divider line */}

@@ -3,9 +3,27 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Icon from '@mdi/react';
 import clsx from 'clsx';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { colors, spacing } from '@/lib/design-tokens';
 import CanarySwitch from './temp-components/CanarySwitch';
 import CanaryCheckbox from './temp-components/CanaryCheckbox';
+import CanaryInput from './temp-components/CanaryInput';
 import { AnimatedSection } from './PageTransition';
 import { CreateMenuModal } from './CreateMenuModal';
 import { CreateItemModal } from './CreateItemModal';
@@ -35,12 +53,14 @@ import {
   mdiEye,
   mdiToggleSwitch,
   mdiToggleSwitchOff,
-  mdiImage
+  mdiImage,
+  mdiClose,
+  mdiDotsHorizontal,
+  mdiDragVertical
 } from '@mdi/js';
 // Import the CanarySidebar component
 import CanarySidebar, { SidebarVariant, type SidebarSection, type SidebarNavigationItem } from './CanarySidebar';
-import CanarySelect, { type CanarySelectOption } from './temp-components/CanarySelect';
-import { InputSize } from './temp-components/types';
+import { InputSize, InputType } from './temp-components/types';
 
 // Tab component using component library patterns
 interface TabProps {
@@ -259,6 +279,39 @@ const FoodItem: React.FC<FoodItemProps> = ({
   );
 };
 
+// Sortable Row Component for drag and drop
+interface SortableRowProps {
+  id: string;
+  children: (props: { dragListeners: any; isDragging: boolean }) => React.ReactNode;
+}
+
+const SortableRow: React.FC<SortableRowProps> = ({ id, children }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div 
+      ref={setNodeRef} 
+      style={style}
+      {...attributes}
+    >
+      {children({ dragListeners: listeners, isDragging })}
+    </div>
+  );
+};
+
 // Main component
 interface MenuManagementPageProps {
   menus: Array<{ name: string; entryPoint: string; isNew?: boolean }>;
@@ -308,10 +361,116 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
   
   const [foodItems, setFoodItems] = useState(FOOD_ITEMS);
   const [prepTime, setPrepTime] = useState(prepTimeMinutes.toString());
+  const [taxesEnabled, setTaxesEnabled] = useState(false);
+  const [supplementalFeesEnabled, setSupplementalFeesEnabled] = useState(false);
+  
+  // Pricing & fees field states
+  const [taxLabel, setTaxLabel] = useState('Sales tax');
+  const [taxPercentage, setTaxPercentage] = useState('8');
+  const [feeLabel, setFeeLabel] = useState('Delivery fee');
+  const [feeAmount, setFeeAmount] = useState('4.00');
+
+  // Add Fee states
+  // Removed separate add fee state - fees are now added immediately as editable entries
+  const [fees, setFees] = useState<Array<{
+    id: string;
+    label: string;
+    type: 'flat' | 'percentage';
+    amount: string;
+    taxable: boolean;
+  }>>([]);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+
+  // Add Tax states
+  const [taxes, setTaxes] = useState<Array<{
+    id: string;
+    label: string;
+    rate: string;
+    applyTo: 'subtotal' | 'subtotal_fees';
+  }>>([]);
   
   // Bulk selection state
   const [selectedMenus, setSelectedMenus] = useState<Set<string>>(new Set());
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+
+  // Helper function to format currency with thousand separators
+  const formatCurrency = (value: string): string => {
+    // Remove all non-digit characters except decimal point
+    const cleanValue = value.replace(/[^\d.]/g, '');
+    
+    // Prevent double zeros at the start
+    if (cleanValue === '00') {
+      return '0';
+    }
+    
+    // Split by decimal point
+    const parts = cleanValue.split('.');
+    
+    // Format the integer part with thousand separators
+    const integerPart = parseInt(parts[0] || '0', 10).toLocaleString('en-US');
+    
+    // Handle decimal part (limit to 2 decimal places)
+    if (parts.length > 1) {
+      const decimalPart = parts[1].slice(0, 2);
+      return `${integerPart}.${decimalPart}`;
+    }
+    
+    return integerPart;
+  };
+  
+  // Helper function to parse formatted currency back to plain number string
+  const parseCurrency = (value: string): string => {
+    return value.replace(/[^\d.]/g, '');
+  };
+
+  // Setup drag sensors for drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Handle drag end for fees
+  const handleFeeDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      const oldIndex = fees.findIndex((fee) => fee.id === active.id);
+      const newIndex = fees.findIndex((fee) => fee.id === over.id);
+      setFees(arrayMove(fees, oldIndex, newIndex));
+    }
+  };
+
+  // Handle drag end for taxes
+  const handleTaxDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      const oldIndex = taxes.findIndex((tax) => tax.id === active.id);
+      const newIndex = taxes.findIndex((tax) => tax.id === over.id);
+      setTaxes(arrayMove(taxes, oldIndex, newIndex));
+    }
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('[data-dropdown-container]')) {
+        setOpenDropdownId(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Load saved items from localStorage and merge with default items
   useEffect(() => {
@@ -596,19 +755,6 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
     setSelectedItems(new Set());
   }, [activeTab]);
 
-  // Options for prep time setting
-  const prepTimeOptions: CanarySelectOption[] = [
-    { label: '15 minutes', value: '15' },
-    { label: '20 minutes', value: '20' },
-    { label: '25 minutes', value: '25' },
-    { label: '30 minutes', value: '30' },
-    { label: '35 minutes', value: '35' },
-    { label: '40 minutes', value: '40' },
-    { label: '45 minutes', value: '45' },
-    { label: '50 minutes', value: '50' },
-    { label: '60 minutes', value: '60' }
-  ];
-
   // Create sidebar sections with exact typography
   const sidebarSections: SidebarSection[] = [
     {
@@ -777,9 +923,9 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
         </AnimatedSection>
 
         {/* Content */}
-        <div className="flex-1 bg-white py-8 px-10 sm:px-4 md:px-6 flex flex-col gap-6 overflow-auto">
+        <div className="flex-1 bg-[#FAFAFA] py-8 px-10 sm:px-4 md:px-6 flex flex-col gap-6 overflow-auto">
           {/* Content Container with Max Width and Centering */}
-          <div className="w-full max-w-[1200px] mx-auto">
+          <div className="w-full max-w-[900px] mx-auto">
             {/* Tabs */}
             <AnimatedSection delay={80}>
               <div 
@@ -930,30 +1076,430 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
                 </div>
 
                 {/* Settings Content */}
-                <div className="flex flex-col gap-6">
-                  {/* Average Order Prep Time Setting */}
-                  <div className="flex flex-col gap-4">
-                    <div className="flex flex-col gap-2">
-                      <h3 className="font-roboto text-body-sm font-medium text-canary-black-1">
-                        Average order prep time
-                      </h3>
-                      <p className="font-roboto text-body-sm text-canary-black-3">
-                        How long an order typically takes to prepare. This is used to calculate estimated arrival times for guests and determine order urgency for staff.
+                <div className="flex flex-col gap-3 w-full">
+                  {/* Average order delivery time card - redesigned */}
+                  <div className="bg-white border border-neutral-200 rounded-lg p-6 flex items-center justify-between">
+                    <div className="flex flex-col gap-0 flex-1 mr-6">
+                      <p className="font-roboto text-[14px] font-medium leading-[22px] text-canary-black-1">
+                        Average order delivery time
+                      </p>
+                      <p className="font-roboto text-[14px] font-normal leading-[22px] text-canary-black-3 whitespace-pre-wrap">
+                        Set how long it typically takes to deliver an order based when an order is submitted, not when it's been approved. The average delivery time is used to estimate arrival times for guests and highlight urgent orders for staff.
                       </p>
                     </div>
-                    
-                    <div className="w-48">
-                      <CanarySelect
-                        options={prepTimeOptions}
+                    <div className="w-[200px] shrink-0">
+                      <CanaryInput
+                        label="Average delivery time (minutes)"
+                        type={InputType.TEXT}
                         value={prepTime}
                         onChange={(e) => {
                           const newPrepTime = e.target.value;
                           setPrepTime(newPrepTime);
-                          onUpdatePrepTime?.(parseInt(newPrepTime));
+                          if (onUpdatePrepTime && !isNaN(parseInt(newPrepTime))) {
+                            onUpdatePrepTime(parseInt(newPrepTime));
+                          }
                         }}
-                        size={InputSize.NORMAL}
-                        placeholder="Select prep time"
+                        size={InputSize.COMPACT}
+                        placeholder="45"
                       />
+                    </div>
+                  </div>
+
+                  {/* Supplemental fees Section - new design */}
+                  <div className="bg-white border border-neutral-200 rounded-lg p-6 flex flex-col gap-6">
+                    <div className="flex flex-col gap-0">
+                      <p className="font-roboto text-[14px] font-medium leading-[22px] text-canary-black-1">
+                        Supplemental fees
+                      </p>
+                      <p className="font-roboto text-[14px] font-normal leading-[22px] text-canary-black-3">
+                        Add flat rate or percentage-based fees to guest orders.
+                      </p>
+                    </div>
+                    
+                    <div className="flex flex-col gap-3">
+                      {/* Animated container for table/empty state */}
+                      <div className="relative" style={{ minHeight: '86px' }}>
+                        {/* Empty state with fade out animation */}
+                        <div 
+                          className={`absolute inset-0 bg-neutral-50 border border-neutral-200 rounded-lg flex items-center justify-center transition-all duration-200 ease-out ${
+                            fees.length > 0
+                              ? 'opacity-0 pointer-events-none' 
+                              : 'opacity-100'
+                          }`} 
+                          style={{ height: '86px' }}
+                        >
+                          <p className="font-roboto text-[14px] font-normal leading-[22px] text-canary-black-3 text-center">
+                            No supplemental fees
+                          </p>
+                        </div>
+
+                        {/* Table with fade in + scale animation */}
+                        <div 
+                          className={`flex flex-col gap-1 transition-all duration-300 ease-out ${
+                            fees.length > 0
+                              ? 'opacity-100 scale-100 translate-y-0'
+                              : 'opacity-0 scale-95 translate-y-1 pointer-events-none'
+                          }`}
+                        >
+                          {/* Table Header */}
+                          <div className={`flex items-center py-0 h-4 ${fees.length > 1 ? 'pl-10 pr-4' : 'px-4'}`}>
+                            <div className="w-[200px] shrink-0">
+                              <p className="font-roboto text-[10px] font-medium leading-[16px] text-canary-black-3 uppercase">
+                                FEE LABEL
+                              </p>
+                            </div>
+                            <div className="w-[124px] shrink-0 ml-3">
+                              <p className="font-roboto text-[10px] font-medium leading-[16px] text-canary-black-3 uppercase">
+                                TYPE
+                              </p>
+                            </div>
+                            <div className="w-[124px] shrink-0 ml-3">
+                              <p className="font-roboto text-[10px] font-medium leading-[16px] text-canary-black-3 uppercase">
+                                AMOUNT
+                              </p>
+                            </div>
+                            <div className="w-[60px] shrink-0 ml-6">
+                              <p className="font-roboto text-[10px] font-medium leading-[16px] text-canary-black-3 uppercase">
+                                TAXABLE?
+                              </p>
+                            </div>
+                            <div className="flex-1"></div>
+                          </div>
+
+                          {/* Table Body */}
+                          <DndContext
+                            sensors={sensors}
+                            collisionDetection={closestCenter}
+                            onDragEnd={handleFeeDragEnd}
+                          >
+                            <SortableContext
+                              items={fees.map(fee => fee.id)}
+                              strategy={verticalListSortingStrategy}
+                            >
+                              <div className="border border-neutral-200 rounded-lg">
+                                {/* Editable fees */}
+                                {fees.map((fee, index) => (
+                                  <SortableRow key={fee.id} id={fee.id}>
+                                    {({ dragListeners, isDragging }) => (
+                                      <div className={`relative bg-white flex items-center justify-between ${fees.length > 1 ? 'pl-1 pr-4' : 'px-4'} py-4 ${index === 0 ? 'rounded-t-lg' : ''} ${index === fees.length - 1 ? 'rounded-b-lg' : ''} ${index < fees.length - 1 ? 'border-b border-neutral-200' : ''}`}>
+                                        <div className="flex items-center">
+                                          {/* Drag handle - only show when there are multiple fees */}
+                                          {fees.length > 1 && (
+                                            <div 
+                                              className="p-1.5 mr-1 cursor-move"
+                                              {...dragListeners}
+                                            >
+                                              <Icon path={mdiDragVertical} size={0.75} color="#666666" />
+                                            </div>
+                                          )}
+                                          <div className="w-[200px]">
+                                      <CanaryInput
+                                        type={InputType.TEXT}
+                                        size={InputSize.COMPACT}
+                                        value={fee.label}
+                                        onChange={(e) => {
+                                          setFees(fees.map(f => f.id === fee.id ? { ...f, label: e.target.value } : f));
+                                        }}
+                                        placeholder="Fee label"
+                                        autoFocus={index === fees.length - 1 && fee.label === ''}
+                                      />
+                                    </div>
+                                    <div className="w-[124px] ml-3">
+                                      <select
+                                        value={fee.type}
+                                        onChange={(e) => {
+                                          setFees(fees.map(f => f.id === fee.id ? { ...f, type: e.target.value as 'flat' | 'percentage' } : f));
+                                        }}
+                                        className="w-full h-8 px-2 pr-8 border border-canary-black-3 rounded text-[14px] font-roboto bg-white focus:outline-none focus:border-canary-blue-1 appearance-none"
+                                        style={{
+                                          backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                                          backgroundRepeat: 'no-repeat',
+                                          backgroundPosition: 'right 8px center',
+                                          backgroundSize: '16px'
+                                        }}
+                                      >
+                                        <option value="flat">Flat fee</option>
+                                        <option value="percentage">Percentage</option>
+                                      </select>
+                                    </div>
+                                    <div className="w-[124px] ml-3">
+                                      {fee.type === 'flat' ? (
+                                        <div className="relative">
+                                          <div className="absolute left-2 top-1/2 -translate-y-1/2 text-[14px] font-roboto text-black pointer-events-none z-10 flex items-center h-8">
+                                            $
+                                          </div>
+                                          <input
+                                            type="text"
+                                            className="w-full h-8 px-2 pl-6 border border-[#666666] rounded text-[14px] font-roboto bg-white focus:outline focus:outline-2 focus:outline-[#2858c4] focus:outline-offset-[-1px]"
+                                            value={formatCurrency(fee.amount)}
+                                            onChange={(e) => {
+                                              const rawValue = parseCurrency(e.target.value);
+                                              // Prevent double zeros
+                                              if (rawValue === '00') {
+                                                setFees(fees.map(f => f.id === fee.id ? { ...f, amount: '0' } : f));
+                                              } else {
+                                                setFees(fees.map(f => f.id === fee.id ? { ...f, amount: rawValue } : f));
+                                              }
+                                            }}
+                                            placeholder="0.00"
+                                          />
+                                        </div>
+                                      ) : (
+                                        <CanaryInput
+                                          type={InputType.TEXT}
+                                          size={InputSize.COMPACT}
+                                          value={fee.amount}
+                                          onChange={(e) => {
+                                            setFees(fees.map(f => f.id === fee.id ? { ...f, amount: e.target.value } : f));
+                                          }}
+                                          placeholder="0.00%"
+                                        />
+                                      )}
+                                    </div>
+                                    <div className="w-[60px] ml-6">
+                                      <CanaryCheckbox
+                                        checked={fee.taxable}
+                                        onChange={(checked) => {
+                                          const updatedFees = fees.map(f => 
+                                            f.id === fee.id ? {...f, taxable: checked} : f
+                                          );
+                                          setFees(updatedFees);
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="relative ml-4" data-dropdown-container>
+                                    <button
+                                      onClick={() => {
+                                        setOpenDropdownId(openDropdownId === fee.id ? null : fee.id);
+                                      }}
+                                      className="text-canary-black-3 hover:text-canary-black-1 p-1 rounded hover:bg-gray-50"
+                                    >
+                                      <Icon path={mdiDotsHorizontal} size={0.75} />
+                                    </button>
+                                    
+                                    {/* Dropdown menu */}
+                                    {openDropdownId === fee.id && (
+                                      <div className="absolute right-0 top-8 bg-white border border-neutral-200 rounded-lg shadow-lg py-1 z-50 min-w-[120px]">
+                                        <button
+                                          onClick={() => {
+                                            setFees(fees.filter(f => f.id !== fee.id));
+                                            setOpenDropdownId(null);
+                                          }}
+                                          className="w-full text-left px-3 py-2 text-[14px] font-roboto text-canary-black-1 hover:bg-gray-50 flex items-center gap-2"
+                                        >
+                                          <Icon path={mdiDelete} size={0.5} />
+                                          Delete fee
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </SortableRow>
+                          ))}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+                  </div>
+                </div>
+                
+                {/* Add fee button - always visible and active */}
+                <button
+                  onClick={() => {
+                    const newFee = {
+                      id: Date.now().toString(),
+                      label: '',
+                      type: 'flat' as const,
+                      amount: '',
+                      taxable: false
+                    };
+                    setFees([...fees, newFee]);
+                  }}
+                  className="bg-canary-blue-light text-canary-blue-1 px-4 h-8 rounded font-roboto font-medium text-[12px] hover:opacity-90 transition-opacity self-start"
+                  style={{ backgroundColor: 'rgba(40, 88, 196, 0.1)' }}
+                >
+                  Add fee
+                </button>
+              </div>
+            </div>
+
+            {/* Taxes Section - new design */}
+            <div className="bg-white border border-neutral-200 rounded-lg p-6 flex flex-col gap-4">
+              <div className="flex flex-col gap-0">
+                <p className="font-roboto text-[14px] font-medium leading-[22px] text-canary-black-1">
+                  Taxes
+                </p>
+                <p className="font-roboto text-[14px] font-normal leading-[22px] text-canary-black-3">
+                  Configure taxes applied to guest orders.
+                </p>
+              </div>
+              
+              <div className="flex flex-col gap-3">
+                {/* Animated container for table/empty state */}
+                <div className="relative" style={{ minHeight: '86px' }}>
+                        {/* Empty state with fade out animation */}
+                        <div 
+                          className={`absolute inset-0 bg-neutral-50 border border-neutral-200 rounded-lg flex items-center justify-center transition-all duration-200 ease-out ${
+                            taxes.length > 0
+                              ? 'opacity-0 pointer-events-none' 
+                              : 'opacity-100'
+                          }`} 
+                          style={{ height: '86px' }}
+                        >
+                          <p className="font-roboto text-[14px] font-normal leading-[22px] text-canary-black-3 text-center">
+                            No taxes
+                          </p>
+                        </div>
+
+                        {/* Table with fade in + scale animation */}
+                        <div 
+                          className={`flex flex-col gap-1 transition-all duration-300 ease-out ${
+                            taxes.length > 0
+                              ? 'opacity-100 scale-100 translate-y-0'
+                              : 'opacity-0 scale-95 translate-y-1 pointer-events-none'
+                          }`}
+                        >
+                          {/* Table Header */}
+                          <div className={`flex items-center py-0 h-4 ${taxes.length > 1 ? 'pl-10 pr-4' : 'px-4'}`}>
+                            <div className="w-[200px] shrink-0">
+                              <p className="font-roboto text-[10px] font-medium leading-[16px] text-canary-black-3 uppercase">
+                                TAX LABEL
+                              </p>
+                            </div>
+                            <div className="w-[124px] shrink-0 ml-3">
+                              <p className="font-roboto text-[10px] font-medium leading-[16px] text-canary-black-3 uppercase">
+                                RATE
+                              </p>
+                            </div>
+                            <div className="w-[200px] shrink-0 ml-3">
+                              <p className="font-roboto text-[10px] font-medium leading-[16px] text-canary-black-3 uppercase">
+                                APPLY TO
+                              </p>
+                            </div>
+                            <div className="flex-1"></div>
+                          </div>
+
+                          {/* Table Body */}
+                          <DndContext
+                            sensors={sensors}
+                            collisionDetection={closestCenter}
+                            onDragEnd={handleTaxDragEnd}
+                          >
+                            <SortableContext
+                              items={taxes.map(tax => tax.id)}
+                              strategy={verticalListSortingStrategy}
+                            >
+                              <div className="border border-neutral-200 rounded-lg">
+                                {/* Editable taxes */}
+                                {taxes.map((tax, index) => (
+                                  <SortableRow key={tax.id} id={tax.id}>
+                                    {({ dragListeners, isDragging }) => (
+                                      <div className={`relative bg-white flex items-center justify-between ${taxes.length > 1 ? 'pl-1 pr-4' : 'px-4'} py-4 ${index === 0 ? 'rounded-t-lg' : ''} ${index === taxes.length - 1 ? 'rounded-b-lg' : ''} ${index < taxes.length - 1 ? 'border-b border-neutral-200' : ''} ${isDragging ? 'z-50' : ''}`}>
+                                        <div className="flex items-center">
+                                          {/* Drag handle - only show when there are multiple taxes */}
+                                          {taxes.length > 1 && (
+                                            <div 
+                                              className="p-1.5 mr-1 cursor-move"
+                                              {...dragListeners}
+                                            >
+                                              <Icon path={mdiDragVertical} size={0.75} color="#666666" />
+                                            </div>
+                                          )}
+                                          <div className="w-[200px]">
+                                            <CanaryInput
+                                              type={InputType.TEXT}
+                                              size={InputSize.COMPACT}
+                                              value={tax.label}
+                                              onChange={(e) => {
+                                                setTaxes(taxes.map(t => t.id === tax.id ? { ...t, label: e.target.value } : t));
+                                              }}
+                                              placeholder="Tax label"
+                                              autoFocus={index === taxes.length - 1 && tax.label === ''}
+                                            />
+                                          </div>
+                                          <div className="w-[124px] ml-3">
+                                            <CanaryInput
+                                              type={InputType.TEXT}
+                                              size={InputSize.COMPACT}
+                                              value={tax.rate}
+                                              onChange={(e) => {
+                                                setTaxes(taxes.map(t => t.id === tax.id ? { ...t, rate: e.target.value } : t));
+                                              }}
+                                              placeholder="0.00%"
+                                            />
+                                          </div>
+                                          <div className="w-[200px] ml-3">
+                                            <select
+                                              value={tax.applyTo}
+                                              onChange={(e) => {
+                                                setTaxes(taxes.map(t => t.id === tax.id ? { ...t, applyTo: e.target.value as 'subtotal' | 'subtotal_fees' } : t));
+                                              }}
+                                              className="w-full h-8 px-2 pr-8 border border-canary-black-3 rounded text-[14px] font-roboto bg-white focus:outline-none focus:border-canary-blue-1 appearance-none"
+                                              style={{
+                                                backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                                                backgroundRepeat: 'no-repeat',
+                                                backgroundPosition: 'right 8px center',
+                                                backgroundSize: '16px'
+                                              }}
+                                            >
+                                              <option value="subtotal">Subtotal only</option>
+                                              <option value="subtotal_fees">Subtotal + fees</option>
+                                            </select>
+                                          </div>
+                                        </div>
+                                        <div className="relative ml-4" data-dropdown-container>
+                                          <button
+                                            onClick={() => {
+                                              setOpenDropdownId(openDropdownId === tax.id ? null : tax.id);
+                                            }}
+                                            className="text-canary-black-3 hover:text-canary-black-1 p-1 rounded hover:bg-gray-50"
+                                          >
+                                            <Icon path={mdiDotsHorizontal} size={0.75} />
+                                          </button>
+                                          
+                                          {/* Dropdown menu */}
+                                          {openDropdownId === tax.id && (
+                                            <div className="absolute right-0 top-8 bg-white border border-neutral-200 rounded-lg shadow-lg py-1 z-50 min-w-[120px]">
+                                              <button
+                                                onClick={() => {
+                                                  setTaxes(taxes.filter(t => t.id !== tax.id));
+                                                  setOpenDropdownId(null);
+                                                }}
+                                                className="w-full text-left px-3 py-2 text-[14px] font-roboto text-canary-black-1 hover:bg-gray-50 flex items-center gap-2"
+                                              >
+                                                <Icon path={mdiDelete} size={0.5} />
+                                                Delete tax
+                                              </button>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </SortableRow>
+                                ))}
+                            </div>
+                          </SortableContext>
+                          </DndContext>
+                        </div>
+                      </div>
+                      
+                      {/* Add tax button - always visible and active */}
+                      <button
+                        onClick={() => {
+                          const newTax = {
+                            id: Date.now().toString(),
+                            label: '',
+                            rate: '',
+                            applyTo: 'subtotal' as const
+                          };
+                          setTaxes([...taxes, newTax]);
+                        }}
+                        className="bg-canary-blue-light text-canary-blue-1 px-4 h-8 rounded font-roboto font-medium text-[12px] hover:opacity-90 transition-opacity self-start"
+                        style={{ backgroundColor: 'rgba(40, 88, 196, 0.1)' }}
+                      >
+                        Add tax
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -989,7 +1535,7 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
           </button>
         </div>
       </AnimatedSection>
-
+      
       {/* Create Menu Modal */}
       <CreateMenuModal
         isOpen={isCreateModalOpen}

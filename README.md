@@ -96,7 +96,15 @@ src/
 - **Menu Availability**: Time-based menu display with automatic updates
 - **Order Confirmation**: Professional receipt and status tracking
 
-### 4. **Guest Content Management (Compendium Builder)**
+### 4. **Settings & Configuration Management**
+- **Pricing & Fees**: Configure multiple supplemental fees (flat or percentage) with taxable flags
+- **Tax Configuration**: Set up taxes with rates and application rules (subtotal only or subtotal + fees)
+- **Prep Time Settings**: Configurable preparation times affecting order priority colors
+- **Order Fulfillment**: Enable/disable different fulfillment methods (Room service, Pick-up, Dine-in)
+- **Inline Management**: Direct editing of all settings without modal dialogs
+- **Visual Feedback**: Smooth animations and transitions for all configuration changes
+
+### 5. **Guest Content Management (Compendium Builder)**
 - **Section Management**: Organize guest content into logical categories
 - **Item Creation**: Rich item editing with images, descriptions, and contact information
 - **Action Buttons**: Configurable buttons for food ordering, calling, emailing, or linking
@@ -104,7 +112,7 @@ src/
 - **Image Compression**: Automatic image optimization to prevent storage issues
 - **Navigation Flow**: Complete guest journey from hub to item details to food ordering
 
-### 5. **Visual & Animation System**
+### 6. **Visual & Animation System**
 - **Page Transitions**: Smooth blur/fade transitions between views
 - **Progressive Loading**: Staggered element animations for polished UX
 - **Modal Animations**: Sophisticated open/close animations with backdrop blur
@@ -201,7 +209,19 @@ npm run dev
 - **Error Recovery**: Graceful handling of missing or corrupted data
 - **Migration Support**: Backwards-compatible data structure evolution
 
-## 🔄 Recent Updates (Latest Session)
+## 🔄 Recent Updates (Latest Session - December 5, 2024)
+
+### 💰 Advanced Pricing & Fees Management
+- ✅ **Supplemental Fees System**: Dynamic fee configuration with flat fee and percentage options
+- ✅ **Tax Management**: Comprehensive tax setup with rate configuration and flexible application rules
+- ✅ **Inline Editing**: All fees and taxes are immediately editable without separate add/edit modes
+- ✅ **Smart Empty States**: Animated transitions between empty state and populated tables
+- ✅ **Drag Handle UI**: Conditional six-dot drag indicators appear when multiple items exist (prep for drag-and-drop)
+- ✅ **Three-dot Menu Actions**: Dropdown menus for delete operations on each fee/tax entry
+- ✅ **Auto-save Pattern**: No explicit save buttons - changes persist automatically on blur/Enter
+- ✅ **Calculation Order**: Tax "Apply to" field supports "Subtotal only" or "Subtotal + fees" for proper calculation hierarchy
+- ✅ **Design System Integration**: Uses canary-ui components with proper spacing and animations
+- ✅ **Figma-accurate Implementation**: Pixel-perfect match to design specifications including colors, spacing, and typography
 
 ### 🤖 AI-Powered Menu Management
 - ✅ **Intelligent Menu Parsing**: Claude AI integration for automatic menu extraction from uploaded images (PDF, JPG, PNG, WebP)
@@ -243,6 +263,12 @@ npm run dev
 - ✅ **Responsive Design**: Enhanced input padding logic for multiple right-side icons (error, AI star, custom addons)
 - ✅ **Statler Logo Integration**: Replaced placeholder text with actual hotel logo (`/statler logo.png`)
 - ✅ **Mobile Preview Resize**: Updated all mobile previews from 320px to 370px width with proportional scaling
+
+### 🔧 Critical Bug Fixes (December 5, 2024)
+- ✅ **Fixed Menu Management Build Error**: Resolved JSX structure issues caused by malformed hidden section
+- ✅ **Drag-and-Drop Implementation**: Successfully added drag-and-drop functionality to Settings tab for fees and taxes
+- ✅ **Component Structure Fix**: Corrected missing closing tags and removed problematic hidden pricing section
+- ✅ **Build Stability**: Ensured successful production build compilation without TypeScript errors
 
 ### Previous Session Features
 - ✅ **Create New Item Flow**: Modal-based creation with navigation to edit page

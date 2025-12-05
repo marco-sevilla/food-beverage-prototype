@@ -5,9 +5,9 @@ import Icon from '@mdi/react';
 import { mdiArrowLeft, mdiClose } from '@mdi/js';
 import { colors } from './temp-components/design-tokens';
 
-// Image constants from Figma
-const hotelLogoImage = "http://localhost:3845/assets/02ef86990d898c1888997fe617cc329d3a113fe3.png";
-const hotelInteriorImage = "http://localhost:3845/assets/ce95c7983cba689bd228ef0b76c4300b31ee9df4.png";
+// Image constants - using local assets
+const hotelLogoImage = "/statler logo.png";
+const hotelInteriorImage = "/Screenshot 2025-11-18 at 7.50.26 AM.png";
 
 interface OrderItem {
   id: string;
@@ -154,15 +154,6 @@ export const EmailPreview: React.FC<EmailPreviewProps> = ({ order, onClose, prep
                   <span className="font-bold">{calculateETA()}</span>
                   . If you need to make any changes, please contact the hotel staff.
                 </p>
-              </div>
-
-              {/* View Order Button */}
-              <div className="mb-8">
-                <button 
-                  className="bg-black text-white font-roboto text-[14px] font-medium px-4 py-2 rounded h-10"
-                >
-                  View order
-                </button>
               </div>
 
               {/* Divider Line */}
