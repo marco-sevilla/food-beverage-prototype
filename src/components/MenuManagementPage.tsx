@@ -24,11 +24,14 @@ import { colors, spacing } from '@/lib/design-tokens';
 import CanarySwitch from './temp-components/CanarySwitch';
 import CanaryCheckbox from './temp-components/CanaryCheckbox';
 import CanaryInput from './temp-components/CanaryInput';
+import CanaryButton from './temp-components/CanaryButton';
+import { ButtonType, ButtonSize } from './temp-components/button-types';
 import { AnimatedSection } from './PageTransition';
 import { CreateMenuModal } from './CreateMenuModal';
 import { CreateItemModal } from './CreateItemModal';
 import { DeleteMenuModal } from './DeleteMenuModal';
 import { DeleteItemModal } from './DeleteItemModal';
+import { ChangelogButton } from './ChangelogButton';
 import { FOOD_ITEMS, formatMenuDisplay, type FoodItem } from '@/data/foodItems';
 import { 
   mdiArrowLeft, 
@@ -369,6 +372,18 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
   const [taxPercentage, setTaxPercentage] = useState('8');
   const [feeLabel, setFeeLabel] = useState('Delivery fee');
   const [feeAmount, setFeeAmount] = useState('4.00');
+  
+  // Track initial values for change detection
+  const [initialValues, setInitialValues] = useState<{
+    prepTime: string;
+    fees: typeof fees;
+    taxes: typeof taxes;
+  }>({
+    prepTime: prepTimeMinutes.toString(),
+    fees: [],
+    taxes: []
+  });
+  const [hasChanges, setHasChanges] = useState(false);
 
   // Add Fee states
   // Removed separate add fee state - fees are now added immediately as editable entries
@@ -470,6 +485,147 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
+  }, []);
+
+  // Check for changes whenever values update
+  useEffect(() => {
+    const currentValues = {
+      prepTime,
+      fees: JSON.stringify(fees),
+      taxes: JSON.stringify(taxes)
+    };
+    
+    const initialValuesCopy = {
+      prepTime: initialValues.prepTime,
+      fees: JSON.stringify(initialValues.fees),
+      taxes: JSON.stringify(initialValues.taxes)
+    };
+    
+    const changed = currentValues.prepTime !== initialValuesCopy.prepTime ||
+                   currentValues.fees !== initialValuesCopy.fees ||
+                   currentValues.taxes !== initialValuesCopy.taxes;
+                   
+    setHasChanges(changed);
+  }, [prepTime, fees, taxes, initialValues]);
+
+  // Validation functions
+  const validateSettings = (): { isValid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+    
+    // Validate prep time
+    const prepTimeNum = parseInt(prepTime);
+    if (isNaN(prepTimeNum) || prepTimeNum <= 0) {
+      errors.push('Average delivery time must be a positive number');
+    }
+    
+    // Validate fees
+    fees.forEach((fee, index) => {
+      if (!fee.label.trim()) {
+        errors.push(`Fee ${index + 1}: Label cannot be empty`);
+      }
+      
+      const amount = fee.type === 'flat' 
+        ? parseFloat(parseCurrency(fee.amount))
+        : parseFloat(fee.amount);
+        
+      if (isNaN(amount) || amount <= 0) {
+        errors.push(`Fee "${fee.label || `${index + 1}`}": Amount cannot be zero or empty`);
+      }
+    });
+    
+    // Validate taxes
+    taxes.forEach((tax, index) => {
+      if (!tax.label.trim()) {
+        errors.push(`Tax ${index + 1}: Label cannot be empty`);
+      }
+      
+      const rate = parseFloat(tax.rate);
+      if (isNaN(rate) || rate <= 0) {
+        errors.push(`Tax "${tax.label || `${index + 1}`}": Rate cannot be zero or empty`);
+      }
+    });
+    
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  };
+
+  // Save settings function
+  const handleSaveSettings = () => {
+    const validation = validateSettings();
+    
+    if (!validation.isValid) {
+      // Show validation errors
+      validation.errors.forEach(error => {
+        onShowToast?.(error, 'error');
+      });
+      return;
+    }
+    
+    // Save to localStorage
+    try {
+      localStorage.setItem('settings_prepTime', prepTime);
+      localStorage.setItem('settings_fees', JSON.stringify(fees));
+      localStorage.setItem('settings_taxes', JSON.stringify(taxes));
+      
+      // Update prep time callback
+      if (onUpdatePrepTime && !isNaN(parseInt(prepTime))) {
+        onUpdatePrepTime(parseInt(prepTime));
+      }
+      
+      // Update initial values to current values
+      setInitialValues({
+        prepTime,
+        fees: JSON.parse(JSON.stringify(fees)),
+        taxes: JSON.parse(JSON.stringify(taxes))
+      });
+      
+      // Show success toast
+      onShowToast?.('Settings saved successfully', 'success');
+      
+      // Reset hasChanges
+      setHasChanges(false);
+    } catch (error) {
+      onShowToast?.('Failed to save settings', 'error');
+    }
+  };
+
+  // Load saved settings on component mount
+  useEffect(() => {
+    try {
+      const savedPrepTime = localStorage.getItem('settings_prepTime');
+      const savedFees = localStorage.getItem('settings_fees');
+      const savedTaxes = localStorage.getItem('settings_taxes');
+      
+      let loadedPrepTime = prepTimeMinutes.toString();
+      let loadedFees: typeof fees = [];
+      let loadedTaxes: typeof taxes = [];
+      
+      if (savedPrepTime) {
+        loadedPrepTime = savedPrepTime;
+        setPrepTime(savedPrepTime);
+      }
+      
+      if (savedFees) {
+        loadedFees = JSON.parse(savedFees);
+        setFees(loadedFees);
+      }
+      
+      if (savedTaxes) {
+        loadedTaxes = JSON.parse(savedTaxes);
+        setTaxes(loadedTaxes);
+      }
+      
+      // Set initial values to loaded values
+      setInitialValues({
+        prepTime: loadedPrepTime,
+        fees: loadedFees,
+        taxes: loadedTaxes
+      });
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+    }
   }, []);
 
   // Load saved items from localStorage and merge with default items
@@ -1069,10 +1225,18 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
             {activeTab === 'settings' && (
               <AnimatedSection delay={160}>
                 {/* Settings Header */}
-                <div className="flex items-start justify-between gap-4 mb-6">
+                <div className="flex items-center justify-between gap-4 mb-6">
                   <h2 className="font-roboto text-title font-semibold text-canary-black-1 shrink-0">
                     Settings
                   </h2>
+                  <CanaryButton
+                    type={ButtonType.PRIMARY}
+                    size={ButtonSize.NORMAL}
+                    isDisabled={!hasChanges}
+                    onClick={handleSaveSettings}
+                  >
+                    Save
+                  </CanaryButton>
                 </div>
 
                 {/* Settings Content */}
@@ -1535,6 +1699,9 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
           </button>
         </div>
       </AnimatedSection>
+      
+      {/* Changelog Button */}
+      <ChangelogButton />
       
       {/* Create Menu Modal */}
       <CreateMenuModal
