@@ -209,7 +209,49 @@ npm run dev
 - **Error Recovery**: Graceful handling of missing or corrupted data
 - **Migration Support**: Backwards-compatible data structure evolution
 
-## 🔄 Recent Updates (Latest Session - December 5, 2024)
+## 🔄 Recent Updates (Latest Session - December 9, 2024)
+
+### 💾 Save Button & Validation System
+- ✅ **Save Button Implementation**: Added primary CanaryButton in Settings header, positioned flush right
+- ✅ **Smart Change Detection**: Button disabled (gray) when no changes, enabled (blue) when changes detected
+- ✅ **Comprehensive Validation**: Validates all settings before saving - no empty labels, no $0/0% amounts
+- ✅ **Toast Notifications**: Individual error toasts for each validation failure, success toast on save
+- ✅ **Real-time Tracking**: Monitors all field modifications including prep time, fees, and taxes
+- ✅ **Persistence Layer**: Saves to localStorage with keys: `settings_prepTime`, `settings_fees`, `settings_taxes`
+
+### 📚 Developer Changelog System
+- ✅ **Floating Changelog Button**: Bottom-right positioned button with dropdown menu
+- ✅ **Modal Documentation**: Comprehensive changelog modal with sleek design and scrollable content
+- ✅ **Linear Integration**: Added clickable Linear issue links (STAY-2044, STAY-2045) that open in new tabs
+- ✅ **Design System Callout**: Blue info box alerting developers to use Canary UI components from Storybook
+- ✅ **Extensible Architecture**: Easy to add new changelog items for future feature documentation
+
+### 🎨 Unified Fees & Taxes Interface
+- ✅ **Combined Section Header**: Changed from separate "Supplemental fees" and "Taxes" to unified "Fees and taxes" section
+- ✅ **Section Description**: "Apply flat rate or percentage fees or taxes to guest orders"
+- ✅ **Two-Column Layout**: Left side for configuration tables, right side for guest preview (32px gap)
+- ✅ **Optimized Column Widths**: Reduced Fee Label and Tax Label columns from 200px to 124px for better balance
+- ✅ **No Divider**: Removed gray divider between fees and taxes tables for cleaner look
+- ✅ **Drag Reordering**: De-scoped for v1 (infrastructure retained for future implementation)
+
+### 💰 Dynamic Price Breakdown Preview
+- ✅ **Live Guest Preview Panel**: Real-time price breakdown showing how fees and taxes appear to guests
+- ✅ **Smart Calculation Order**: 
+  1. Subtotal ($100 static)
+  2. Taxes on subtotal only
+  3. Taxable fees
+  4. Taxes on subtotal + fees
+  5. Non-taxable fees
+  6. Total (with divider)
+- ✅ **Default State**: Shows only Subtotal → Divider → Total when no fees/taxes configured
+- ✅ **Accurate Calculations**: 
+  - Percentage fees calculate from subtotal
+  - Taxes on "subtotal + fees" include all taxable fees in base
+  - Non-taxable fees excluded from all tax calculations
+- ✅ **Visual Design**: White background with shadow effect (260px width)
+- ✅ **Real-time Updates**: Instantly reflects changes to fees/taxes configuration
+
+## 🔄 Previous Updates (December 5, 2024)
 
 ### 💰 Advanced Pricing & Fees Management
 - ✅ **Supplemental Fees System**: Dynamic fee configuration with flat fee and percentage options

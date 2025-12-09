@@ -1269,16 +1269,22 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
                     </div>
                   </div>
 
-                  {/* Supplemental fees Section - new design */}
-                  <div className="bg-white border border-neutral-200 rounded-lg p-6 flex flex-col gap-6">
-                    <div className="flex flex-col gap-0">
+                  {/* Fees and Taxes Section with Preview */}
+                  <div className="bg-white border border-neutral-200 rounded-lg p-6">
+                    {/* Section Header */}
+                    <div className="flex flex-col gap-0 mb-6">
                       <p className="font-roboto text-[14px] font-medium leading-[22px] text-canary-black-1">
-                        Supplemental fees
+                        Fees and taxes
                       </p>
                       <p className="font-roboto text-[14px] font-normal leading-[22px] text-canary-black-3">
-                        Add flat rate or percentage-based fees to guest orders.
+                        Apply flat rate or percentage fees or taxes to guest orders.
                       </p>
                     </div>
+                    
+                    {/* Two Column Layout */}
+                    <div className="flex gap-8">
+                      {/* Left Column - Tables */}
+                      <div className="flex-1 flex flex-col gap-6">
                     
                     <div className="flex flex-col gap-3">
                       {/* Animated container for table/empty state */}
@@ -1306,8 +1312,8 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
                           }`}
                         >
                           {/* Table Header */}
-                          <div className={`flex items-center py-0 h-4 ${fees.length > 1 ? 'pl-10 pr-4' : 'px-4'}`}>
-                            <div className="w-[200px] shrink-0">
+                          <div className="flex items-center py-0 h-4 px-4">
+                            <div className="w-[124px] shrink-0">
                               <p className="font-roboto text-[10px] font-medium leading-[16px] text-canary-black-3 uppercase">
                                 FEE LABEL
                               </p>
@@ -1345,18 +1351,9 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
                                 {fees.map((fee, index) => (
                                   <SortableRow key={fee.id} id={fee.id}>
                                     {({ dragListeners, isDragging }) => (
-                                      <div className={`relative bg-white flex items-center justify-between ${fees.length > 1 ? 'pl-1 pr-4' : 'px-4'} py-4 ${index === 0 ? 'rounded-t-lg' : ''} ${index === fees.length - 1 ? 'rounded-b-lg' : ''} ${index < fees.length - 1 ? 'border-b border-neutral-200' : ''}`}>
+                                      <div className={`relative bg-white flex items-center justify-between px-4 py-4 ${index === 0 ? 'rounded-t-lg' : ''} ${index === fees.length - 1 ? 'rounded-b-lg' : ''} ${index < fees.length - 1 ? 'border-b border-neutral-200' : ''}`}>
                                         <div className="flex items-center">
-                                          {/* Drag handle - only show when there are multiple fees */}
-                                          {fees.length > 1 && (
-                                            <div 
-                                              className="p-1.5 mr-1 cursor-move"
-                                              {...dragListeners}
-                                            >
-                                              <Icon path={mdiDragVertical} size={0.75} color="#666666" />
-                                            </div>
-                                          )}
-                                          <div className="w-[200px]">
+                                          <div className="w-[124px]">
                                       <CanaryInput
                                         type={InputType.TEXT}
                                         size={InputSize.COMPACT}
@@ -1486,18 +1483,9 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
                   Add fee
                 </button>
               </div>
-            </div>
-
-            {/* Taxes Section - new design */}
-            <div className="bg-white border border-neutral-200 rounded-lg p-6 flex flex-col gap-4">
-              <div className="flex flex-col gap-0">
-                <p className="font-roboto text-[14px] font-medium leading-[22px] text-canary-black-1">
-                  Taxes
-                </p>
-                <p className="font-roboto text-[14px] font-normal leading-[22px] text-canary-black-3">
-                  Configure taxes applied to guest orders.
-                </p>
-              </div>
+              
+              {/* Taxes Section - No divider, no separate header */}
+              <div className="flex flex-col gap-4">
               
               <div className="flex flex-col gap-3">
                 {/* Animated container for table/empty state */}
@@ -1525,8 +1513,8 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
                           }`}
                         >
                           {/* Table Header */}
-                          <div className={`flex items-center py-0 h-4 ${taxes.length > 1 ? 'pl-10 pr-4' : 'px-4'}`}>
-                            <div className="w-[200px] shrink-0">
+                          <div className="flex items-center py-0 h-4 px-4">
+                            <div className="w-[124px] shrink-0">
                               <p className="font-roboto text-[10px] font-medium leading-[16px] text-canary-black-3 uppercase">
                                 TAX LABEL
                               </p>
@@ -1559,18 +1547,9 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
                                 {taxes.map((tax, index) => (
                                   <SortableRow key={tax.id} id={tax.id}>
                                     {({ dragListeners, isDragging }) => (
-                                      <div className={`relative bg-white flex items-center justify-between ${taxes.length > 1 ? 'pl-1 pr-4' : 'px-4'} py-4 ${index === 0 ? 'rounded-t-lg' : ''} ${index === taxes.length - 1 ? 'rounded-b-lg' : ''} ${index < taxes.length - 1 ? 'border-b border-neutral-200' : ''} ${isDragging ? 'z-50' : ''}`}>
+                                      <div className={`relative bg-white flex items-center justify-between px-4 py-4 ${index === 0 ? 'rounded-t-lg' : ''} ${index === taxes.length - 1 ? 'rounded-b-lg' : ''} ${index < taxes.length - 1 ? 'border-b border-neutral-200' : ''}`}>
                                         <div className="flex items-center">
-                                          {/* Drag handle - only show when there are multiple taxes */}
-                                          {taxes.length > 1 && (
-                                            <div 
-                                              className="p-1.5 mr-1 cursor-move"
-                                              {...dragListeners}
-                                            >
-                                              <Icon path={mdiDragVertical} size={0.75} color="#666666" />
-                                            </div>
-                                          )}
-                                          <div className="w-[200px]">
+                                          <div className="w-[124px]">
                                             <CanaryInput
                                               type={InputType.TEXT}
                                               size={InputSize.COMPACT}
@@ -1667,6 +1646,105 @@ export const MenuManagementPage: React.FC<MenuManagementPageProps> = ({
                     </div>
                   </div>
                 </div>
+                
+                {/* Right Column - Guest Preview */}
+                {/* Calculate price breakdown */}
+                {(() => {
+                  const subtotal = 100; // Static subtotal
+                  const breakdown: Array<{ label: string; amount: number; isTotal?: boolean }> = [];
+                  
+                  // 1. Taxes on subtotal only
+                  const subtotalOnlyTaxes = taxes.filter(t => t.applyTo === 'subtotal' && t.label && t.rate);
+                  let subtotalTaxAmount = 0;
+                  subtotalOnlyTaxes.forEach(tax => {
+                    const rate = parseFloat(tax.rate) || 0;
+                    const amount = (subtotal * rate) / 100;
+                    subtotalTaxAmount += amount;
+                    breakdown.push({ label: tax.label, amount });
+                  });
+                  
+                  // 2. Taxable fees
+                  const taxableFees = fees.filter(f => f.taxable && f.label && f.amount);
+                  let taxableFeesAmount = 0;
+                  taxableFees.forEach(fee => {
+                    const amount = fee.type === 'flat' 
+                      ? parseFloat(fee.amount) || 0
+                      : (subtotal * (parseFloat(fee.amount) || 0)) / 100;
+                    taxableFeesAmount += amount;
+                    breakdown.push({ label: fee.label, amount });
+                  });
+                  
+                  // 3. Taxes on subtotal + fees
+                  const subtotalPlusFeesTaxes = taxes.filter(t => t.applyTo === 'subtotal_fees' && t.label && t.rate);
+                  let subtotalPlusFeesTaxAmount = 0;
+                  subtotalPlusFeesTaxes.forEach(tax => {
+                    const rate = parseFloat(tax.rate) || 0;
+                    const amount = ((subtotal + taxableFeesAmount) * rate) / 100;
+                    subtotalPlusFeesTaxAmount += amount;
+                    breakdown.push({ label: tax.label, amount });
+                  });
+                  
+                  // 4. Non-taxable fees
+                  const nonTaxableFees = fees.filter(f => !f.taxable && f.label && f.amount);
+                  let nonTaxableFeesAmount = 0;
+                  nonTaxableFees.forEach(fee => {
+                    const amount = fee.type === 'flat'
+                      ? parseFloat(fee.amount) || 0
+                      : (subtotal * (parseFloat(fee.amount) || 0)) / 100;
+                    nonTaxableFeesAmount += amount;
+                    breakdown.push({ label: fee.label, amount });
+                  });
+                  
+                  // Calculate total
+                  const total = subtotal + subtotalTaxAmount + taxableFeesAmount + 
+                                subtotalPlusFeesTaxAmount + nonTaxableFeesAmount;
+                  
+                  return (
+                <div className="w-[260px] shrink-0">
+                  <div className="flex flex-col gap-1">
+                    <p className="font-roboto text-[10px] font-medium leading-[16px] text-canary-black-3 uppercase">
+                      PRICE BREAKDOWN EXAMPLE
+                    </p>
+                    <div className="bg-white border border-canary-black-6 rounded-lg p-4 shadow-[0px_2px_6px_rgba(0,0,0,0.2)]">
+                      <div className="flex flex-col gap-2">
+                        {/* Subtotal - always shown */}
+                        <div className="flex justify-between items-center">
+                          <span className="font-roboto text-[14px] font-normal leading-[22px] text-canary-black-1">Subtotal</span>
+                          <span className="font-roboto text-[14px] font-normal leading-[22px] text-canary-black-1">
+                            ${subtotal.toFixed(2)}
+                          </span>
+                        </div>
+                        
+                        {/* Dynamic line items */}
+                        {breakdown.map((item, index) => (
+                          <div key={index} className="flex justify-between items-center">
+                            <span className="font-roboto text-[14px] font-normal leading-[22px] text-canary-black-1">
+                              {item.label}
+                            </span>
+                            <span className="font-roboto text-[14px] font-normal leading-[22px] text-canary-black-1">
+                              ${item.amount.toFixed(2)}
+                            </span>
+                          </div>
+                        ))}
+                        
+                        {/* Divider and Total - always shown */}
+                        <div className="border-t border-canary-black-6 pt-2">
+                          <div className="flex justify-between items-center">
+                            <span className="font-roboto text-[14px] font-normal leading-[22px] text-canary-black-1">Total</span>
+                            <span className="font-roboto text-[14px] font-medium leading-[22px] text-canary-black-1">
+                              ${total.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                );
+                })()}
+              </div>
+              </div>
+              </div>
               </AnimatedSection>
             )}
           </div>
